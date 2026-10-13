@@ -1,5 +1,5 @@
 /* ============================================================================
-   VIOLET — Level Violet: Ultra-Refraction. Constants mirror the Python version
+   VIOLET. Constants mirror the Python version
    (level3-violet/violet.py) exactly so both builds play identically.
    ============================================================================ */
 
@@ -35,7 +35,7 @@ export const SPAWN = { x: 40, y: 600 - 76 };
 
 export const LEVEL = {
   name: 'VIOLET',
-  title: 'Level Violet: Ultra-Refraction',
+  title: 'VIOLET',
   tagline: 'You are Thanos. Five bullets. Three drones. One impossible door.',
   victory: 'PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: INDIGO',
 };

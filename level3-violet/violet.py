@@ -1,5 +1,5 @@
 """
-VIOLET — Level Violet: Ultra-Refraction  (Phase 1 of the colour-spectrum game)
+VIOLET  (Phase 1 of the colour-spectrum game)
 
 2D third-person neon action-puzzle. You are Thanos: destroy every security drone
 with 5 gravity-bound vector bullets, then bend a trick shot (gravity + wall
@@ -291,7 +291,7 @@ def draw_thanos(surf, glow, p, t):
 class Game:
     def __init__(s):
         pg.init()
-        s.screen = pg.display.set_mode((W, H)); pg.display.set_caption("VIOLET — Level Violet: Ultra-Refraction")
+        s.screen = pg.display.set_mode((W, H)); pg.display.set_caption("VIOLET")
         s.clock = pg.time.Clock()
         name = next((n for n in ("bahnschrift", "orbitron", "agencyfb", "eurostile", "consolas") if pg.font.match_font(n)), None)
         s.f_big, s.f_mid, s.f_sm = pg.font.SysFont(name, 64, bold=True), pg.font.SysFont(name, 26, bold=True), pg.font.SysFont(name, 18)
@@ -451,7 +451,7 @@ class Game:
 
     def draw_hud(s):
         sc = s.screen; pg.draw.rect(sc, BG, (0, 0, W, 44)); pg.draw.line(s.glow, WALL_C, (0, 43), (W, 43), 2)
-        s.text("LEVEL VIOLET", s.f_sm, SOFT, (70, 22))
+        s.text("VIOLET", s.f_sm, SOFT, (50, 22))
         s.text("LIVES", s.f_sm, SOFT, (165, 22))
         for i in range(LIVES):
             c = PLAYER_C if i < s.lives else DEEP; pts = [(200 + i * 22, 14), (209 + i * 22, 22), (200 + i * 22, 30), (191 + i * 22, 22)]
@@ -479,7 +479,6 @@ class Game:
             s.overlay(150)
             if s.state == "menu":
                 s.text("VIOLET", s.f_big, PALE, (W // 2, 170), PLAYER_C)
-                s.text("LEVEL VIOLET · ULTRA-REFRACTION", s.f_mid, SOFT, (W // 2, 230))
                 s.text("You are Thanos. Five bullets. Three drones. One impossible door.", s.f_sm, SCALE_C, (W // 2, 270))
                 s.button("start", "START", (W // 2, 340)); s.button("rules", "RULES", (W // 2, 405)); s.button("exit", "EXIT", (W // 2, 470))
             else:
