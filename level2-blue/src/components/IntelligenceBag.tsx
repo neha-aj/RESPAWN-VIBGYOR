@@ -53,19 +53,19 @@ export function IntelligenceBag({ open, onToggle, live, progress, level }: { ope
             </div>
             <p className="px-3 pt-2 font-term text-base text-primary">The clock keeps running while the bag is open.</p>
             <div className="scroll-blue flex-1 space-y-3 overflow-y-auto p-3">
-              <Entry title="LEVEL 1 · GEOMETRIC ORDER" done>
+              <Entry title="STARTING CLUE · GEOMETRIC ORDER" done>
                 <div className="flex flex-wrap items-center gap-1">
                   {progress.previousOrder.map((s, i) => (
                     <span key={s} className="flex items-center gap-1"><ShapeIcon shape={s} size={14} bright /> {s}{i < progress.previousOrder.length - 1 && <span className="text-primary">→</span>}</span>
                   ))}
                 </div>
               </Entry>
-              <Entry title="LEVEL 2 · CHAMBER MAPPING">
+              <Entry title="LEVEL 1 · CHAMBER MAPPING">
                 <ul className="space-y-1">{WEIGHT_IDS.map((id) => <li key={id} className="flex items-center gap-2"><ShapeIcon shape={SHAPE_OF[id]} size={14} /> {SHAPE_OF[id]} = weight {id}</li>)}</ul>
               </Entry>
-              <Entry title="LEVEL 2 · WEIGHTS" locked={!weights} done={!!weights}>{weights && <p>A = {weights.A} · B = {weights.B} · C = {weights.C}</p>}</Entry>
-              <Entry title="LEVEL 2 · SWITCH ORDER" locked={!order} done={!!order}>{order && <p>{order.join(' → ')} <span className="text-primary">(lightest to heaviest)</span></p>}</Entry>
-              <Entry title="LEVEL 2 · BALANCE SEQUENCE" locked={!sequence || !weights} done={!!sequence}>
+              <Entry title="LEVEL 1 · WEIGHTS" locked={!weights} done={!!weights}>{weights && <p>A = {weights.A} · B = {weights.B} · C = {weights.C}</p>}</Entry>
+              <Entry title="LEVEL 1 · SWITCH ORDER" locked={!order} done={!!order}>{order && <p>{order.join(' → ')} <span className="text-primary">(lightest to heaviest)</span></p>}</Entry>
+              <Entry title="LEVEL 1 · BALANCE SEQUENCE" locked={!sequence || !weights} done={!!sequence}>
                 {sequence && weights && (
                   <>
                     <table className="w-full text-left"><tbody>
@@ -77,13 +77,13 @@ export function IntelligenceBag({ open, onToggle, live, progress, level }: { ope
                   </>
                 )}
               </Entry>
-              <Entry title="LEVEL 3 · THE OVERLAP TRAP" locked={!progress.level3} done={!!progress.level3}>
+              <Entry title="LEVEL 2 · THE OVERLAP TRAP" locked={!progress.level3} done={!!progress.level3}>
                 {progress.level3 && <p>Total distinct triangles: <span className="font-pixel text-[16px] text-ice">{progress.level3.triangles}</span></p>}
               </Entry>
-              <Entry title="LEVEL 4 · REMAINDER LOCK" locked={l4.tile == null} done={l4.tile != null}>
+              <Entry title="LEVEL 3 · REMAINDER LOCK" locked={l4.tile == null} done={l4.tile != null}>
                 {l4.tile != null && <p>Safe tile: <span className="font-pixel text-[16px] text-ice">{l4.tile}</span><br /><span className="text-primary">Even · remainder 2 when ÷ 5 · greater than 10</span></p>}
               </Entry>
-              <Entry title="LEVEL 4 · DIGIT REDUCTION" locked={l4.digitSum == null} done={l4.digitSum != null}>
+              <Entry title="LEVEL 3 · DIGIT REDUCTION" locked={l4.digitSum == null} done={l4.digitSum != null}>
                 {l4.tile != null && l4.digitSum != null && <p>{digitSumExpression(l4.tile)} = <span className="font-pixel text-[16px] text-ice">{l4.digitSum}</span></p>}
               </Entry>
               <Entry title="FINAL ESCAPE CODE" locked={!l4.escaped} done={l4.escaped}>

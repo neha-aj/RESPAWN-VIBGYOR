@@ -3,7 +3,7 @@ import { KeyRound, X } from 'lucide-react';
 import { useRef, type FormEvent } from 'react';
 import { FINAL_LABELS } from '../game/progress';
 
-const SOURCES = ['Level 2 · balance', 'Level 3 · overlap', 'Level 4 · lock', 'Level 4 · digits'];
+const SOURCES = ['Level 1 · balance', 'Level 2 · overlap', 'Level 3 · lock', 'Level 3 · digits'];
 const MAXLEN = [3, 3, 2, 1];
 
 /** Four separate segments: the player assembles the code from the Intelligence Bag. */
