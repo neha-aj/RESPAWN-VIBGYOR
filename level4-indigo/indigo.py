@@ -107,7 +107,7 @@ class Synth:
     SR = 22050
     def __init__(s):
         s.ok, s.muted, s.snd = False, False, {}
-        try: pg.mixer.init(s.SR, -16, 1, 512); s.ok = pg.mixer.get_init() is not None
+        try: pg.mixer.quit(); pg.mixer.init(s.SR, -16, 1, 512); s.ok = pg.mixer.get_init() == (s.SR, -16, 1)   # pg.init() opened 44.1 kHz stereo
         except pg.error: s.ok = False
         if not s.ok: return
         rnd = random.Random(11); nz = lambda: rnd.uniform(-1, 1); ex, sin, tau = math.exp, math.sin, 2 * math.pi

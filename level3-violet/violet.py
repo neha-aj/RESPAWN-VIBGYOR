@@ -167,7 +167,7 @@ class Synth:
     def __init__(s):
         s.ok, s.muted, s.snd = False, False, {}
         try:
-            pg.mixer.pre_init(s.SR, -16, 1, 512); pg.mixer.init(s.SR, -16, 1, 512)
+            pg.mixer.quit(); pg.mixer.init(s.SR, -16, 1, 512)        # pg.init() already opened a 44.1 kHz stereo mixer
             s.ok = pg.mixer.get_init() is not None
         except pg.error: s.ok = False
         if not s.ok: return
