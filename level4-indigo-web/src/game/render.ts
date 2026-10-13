@@ -123,7 +123,7 @@ export class Renderer {
   private hud(s: IndigoGame) {
     const g = this.g, sh = s.ship;
     g.fillStyle = C.bg; g.fillRect(0, 0, W, TOP - 4); line(this.gl, { x: 0, y: TOP - 5 }, { x: W, y: TOP - 5 }, C.laser, 2);
-    this.text('VIBGYOR / INDIGO', 14, C.pale, 12, 15, 'left'); this.text('ORBITAL SINGULARITY', 13, C.soft, 12, 35, 'left', 500);
+    this.text('INDIGO', 20, C.pale, 12, 25, 'left');
     this.text('LIVES', 13, C.soft, 205, 15, 'left', 500);
     for (let i = 0; i < LIVES; i++) { const cx = 212 + i * 20; poly(g, [{ x: cx, y: 26 }, { x: cx + 7, y: 40 }, { x: cx - 7, y: 40 }], i < s.lives ? C.portal : C.deep); }
     this.text('ANCHORS', 13, C.soft, 285, 15, 'left', 500);

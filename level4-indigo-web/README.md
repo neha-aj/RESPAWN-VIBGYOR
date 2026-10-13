@@ -1,4 +1,4 @@
-# VIBGYOR · INDIGO — Orbital Singularity (web)
+# INDIGO (web)
 
 The web version of INDIGO. Gameplay, physics and layout are identical to the Python version in `../level4-indigo/indigo.py`. It uses the same stack as BLUE and VIOLET (React + TypeScript + Vite + Tailwind), but lives in its own project so the levels can be merged later.
 

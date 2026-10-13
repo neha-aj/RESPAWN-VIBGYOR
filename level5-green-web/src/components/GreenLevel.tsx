@@ -49,8 +49,6 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
         <AnimatePresence>
           {state === 'TITLE' && (
             <Screen key="title" tint={0.55}>
-              <p className="font-grn text-xl tracking-[0.5em] text-grn-dim">VIBGYOR</p>
-              <p className="font-grn text-sm tracking-[0.4em] text-grn-light">LEVEL GREEN</p>
               <h1 className="mt-1 font-fell text-[clamp(40px,7vw,76px)] leading-none text-grn-text [text-shadow:0_0_18px_rgba(57,255,20,0.35)]">{LEVEL.title}</h1>
               <p className="mt-3 font-grn text-lg text-grn-pale">{LEVEL.tagline}</p>
               <p className="font-grn text-sm text-grn-text">{LEVEL.goal}</p>
@@ -60,9 +58,9 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
               </div>
               <p className="mt-4 animate-pulse font-grn text-xl text-grn-glow">PRESS ENTER TO BEGIN</p>
               <div className="mt-4 flex flex-col gap-3">
-                <SylvanButton onClick={click(() => eng()?.start())} autoFocus><Play size={15} /> BEGIN</SylvanButton>
-                <SylvanButton onClick={click(() => eng()?.showRules(true))}><BookOpen size={15} /> RULES</SylvanButton>
-                <SylvanButton onClick={click(exit)}><LogOut size={15} /> EXIT</SylvanButton>
+                <ForestButton onClick={click(() => eng()?.start())} autoFocus><Play size={15} /> BEGIN</ForestButton>
+                <ForestButton onClick={click(() => eng()?.showRules(true))}><BookOpen size={15} /> RULES</ForestButton>
+                <ForestButton onClick={click(exit)}><LogOut size={15} /> EXIT</ForestButton>
               </div>
               <p className="mt-3 font-grn text-[11px] text-grn-dim">R RESTART · P / ESC PAUSE · M MUTE · H RULES</p>
             </Screen>
@@ -73,16 +71,16 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
               {RULES_PLACEHOLDER.isPlaceholder && <p className="mt-2 font-grn text-xs text-grn-light">PLACEHOLDER — FINAL RULES TO BE ATTACHED</p>}
               <ul className="mt-5 max-w-[720px] space-y-2 text-left font-grn text-[14px] leading-snug text-grn-pale">{RULES_PLACEHOLDER.lines.map((l) => <li key={l}>~ {l}</li>)}</ul>
               <p className="mt-4 font-grn text-xs text-grn-dim">{RULES_PLACEHOLDER.controls}</p>
-              <div className="mt-6"><SylvanButton onClick={click(() => eng()?.showRules(false))} autoFocus>BACK</SylvanButton></div>
+              <div className="mt-6"><ForestButton onClick={click(() => eng()?.showRules(false))} autoFocus>BACK</ForestButton></div>
             </Screen>
           )}
           {state === 'PAUSED' && (
             <Screen key="pause">
               <h2 className="flex items-center gap-3 font-fell text-6xl text-grn-text"><Pause size={44} /> PAUSED</h2>
               <div className="mt-8 flex flex-col gap-3">
-                <SylvanButton onClick={click(() => eng()?.resume())} autoFocus><Play size={15} /> RESUME</SylvanButton>
-                <SylvanButton onClick={click(() => eng()?.restart())}><RotateCcw size={15} /> RESTART (R)</SylvanButton>
-                <SylvanButton onClick={click(exit)}><LogOut size={15} /> EXIT</SylvanButton>
+                <ForestButton onClick={click(() => eng()?.resume())} autoFocus><Play size={15} /> RESUME</ForestButton>
+                <ForestButton onClick={click(() => eng()?.restart())}><RotateCcw size={15} /> RESTART (R)</ForestButton>
+                <ForestButton onClick={click(exit)}><LogOut size={15} /> EXIT</ForestButton>
               </div>
             </Screen>
           )}
@@ -91,7 +89,7 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
               <h2 className="font-fell text-[clamp(34px,5.5vw,60px)] text-grn-text [text-shadow:0_0_20px_rgba(57,255,20,0.3)]">{LEVEL.over[0]}</h2>
               <p className="mt-3 font-grn text-base text-grn-dim">{snap?.cause}</p>
               <p className="mt-3 font-grn text-xl text-grn-pale">{LEVEL.over[1]}</p>
-              <div className="mt-6"><SylvanButton onClick={click(() => eng()?.restart())} autoFocus><RotateCcw size={15} /> TRY AGAIN (R)</SylvanButton></div>
+              <div className="mt-6"><ForestButton onClick={click(() => eng()?.restart())} autoFocus><RotateCcw size={15} /> TRY AGAIN (R)</ForestButton></div>
             </Screen>
           )}
           {snap?.won && (
@@ -100,7 +98,7 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
               <p className="mt-3 font-grn text-2xl tracking-[0.1em] text-grn-glow">{LEVEL.victory[1]}</p>
               <p className="mt-3 font-grn text-sm text-grn-dim">LIVES {snap.lives} · RUNES 3/3 · TIME LEFT {Math.floor(tl / 60)}:{String(tl % 60).padStart(2, '0')}</p>
               <p className="mt-3 font-grn text-xl text-grn-pale">{LEVEL.victory[2]}</p>
-              <div className="mt-6"><SylvanButton onClick={click(() => eng()?.restart())} autoFocus><RotateCcw size={15} /> REPLAY (R)</SylvanButton></div>
+              <div className="mt-6"><ForestButton onClick={click(() => eng()?.restart())} autoFocus><RotateCcw size={15} /> REPLAY (R)</ForestButton></div>
             </Screen>
           )}
         </AnimatePresence>
@@ -108,7 +106,7 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-grn-void text-center">
             <p className="font-fell text-5xl text-grn-text">GREEN</p>
             <p className="font-grn text-base text-grn-pale">The forest falls silent. You can close this browser tab now.</p>
-            <SylvanButton onClick={() => setExited(false)}>BACK</SylvanButton>
+            <ForestButton onClick={() => setExited(false)}>BACK</ForestButton>
           </div>
         )}
       </div>
@@ -140,7 +138,7 @@ function Screen({ children, tint = 0.7 }: { children: ReactNode; tint?: number }
   );
 }
 
-function SylvanButton({ children, onClick, autoFocus }: { children: ReactNode; onClick: () => void; autoFocus?: boolean }) {
+function ForestButton({ children, onClick, autoFocus }: { children: ReactNode; onClick: () => void; autoFocus?: boolean }) {
   return (
     <button type="button" onClick={onClick} autoFocus={autoFocus}
       className="flex w-64 items-center justify-center gap-2 border-2 border-grn-dim bg-grn-void/85 py-2 font-grn text-lg tracking-[0.2em] text-grn-text transition hover:border-grn-glow hover:bg-grn-moss hover:text-grn-portal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-grn-glow">

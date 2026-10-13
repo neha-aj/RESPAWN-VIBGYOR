@@ -1,5 +1,5 @@
 """
-VIBGYOR · ORANGE
+ORANGE
 A typing-dance rhythm game in chibi pixel art. Type whole sentences; every correct keystroke is a
 dance move for Thanos. Hold at least 40 WPM with at least 88% accuracy for 60 seconds and the
 speakers slide apart to reveal the Phase Door to RED.
