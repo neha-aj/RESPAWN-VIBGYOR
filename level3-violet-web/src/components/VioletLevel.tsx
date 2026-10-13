@@ -44,7 +44,7 @@ export default function VioletLevel({ onComplete, onExit }: { onComplete?: () =>
   return (
     <div className="flex h-full w-full items-center justify-center bg-vio-bg">
       <div className="relative" style={{ width: `min(100vw, calc(100vh * ${W} / ${H}))`, aspectRatio: `${W} / ${H}` }}>
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full cursor-none" aria-label="Level Violet: Thanos in a neon violet city, facing security drones and a hidden Phase Door" />
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full cursor-none" aria-label="Violet: Thanos in a neon violet city, facing security drones and a hidden Phase Door" />
         <button type="button" onClick={toggleMute} aria-label={muted ? 'Sound off. Click to turn on' : 'Sound on. Click to mute'} aria-pressed={!muted}
           className="absolute bottom-2 right-2 z-20 flex items-center gap-1 border border-vio-wall bg-vio-bg/80 px-2 py-1 font-vio text-[10px] text-vio-soft hover:text-vio-pale">
           {muted ? <VolumeX size={14} /> : <Volume2 size={14} />} {muted ? 'MUTED' : 'SOUND'}
@@ -53,7 +53,6 @@ export default function VioletLevel({ onComplete, onExit }: { onComplete?: () =>
           {state === 'menu' && (
             <Screen key="menu">
               <h1 className="font-vio text-[clamp(44px,8vw,84px)] font-black tracking-[0.18em] text-vio-pale [text-shadow:0_0_18px_#8F00FF,0_0_42px_#8F00FF]">{LEVEL.name}</h1>
-              <p className="mt-2 font-vio text-sm tracking-[0.3em] text-vio-soft">LEVEL VIOLET · ULTRA-REFRACTION</p>
               <p className="mt-3 font-vio text-xs text-vio-lilac">{LEVEL.tagline}</p>
               <div className="mt-8 flex flex-col gap-4">
                 <NeonButton onClick={click(() => eng()?.start())} autoFocus><Play size={14} /> START</NeonButton>

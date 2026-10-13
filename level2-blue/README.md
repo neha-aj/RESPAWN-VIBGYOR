@@ -1,4 +1,6 @@
-# BLUE — Levels 2, 3 and 4
+# BLUE — Levels 1, 2 and 3
+
+On screen the levels are numbered 1, 2 and 3. In the code they keep the ids 2, 3 and 4 (`LEVEL_INFO[id].number` is the number the player sees).
 
 *Balance the impossible. Beat the flood.*
 
@@ -49,24 +51,24 @@ A = 17 − 13 = 4,  B = 17 − 10 = 7,  C = 17 − 11 = 6
 
 - Lightest to heaviest: **A → C → B**.
 - Mapping shown in the chamber: triangle = A, square = C, pentagon = B.
-- Read in the Level 1 order (triangle → square → pentagon), the weights give **467**.
+- Read in the starting-clue order (triangle → square → pentagon), the weights give **467**.
 
-## Levels 3 and 4 (continuation)
+## Levels 2 and 3 (continuation)
 
 After BLUE's balance chamber, the game continues through two more rooms, each with its own hints, rules and Thanos reactions.
 
 ## The clock
 
-One **3-minute clock** covers Levels 2, 3 and 4 together (`GAME_TIME_MS` in `src/game/config.ts`).
+One **3-minute clock** covers Levels 1, 2 and 3 together (`GAME_TIME_MS` in `src/game/config.ts`).
 
-- **Start:** the clock begins when you press Start Level on Level 2.
+- **Start:** the clock begins when you press Start Level on Level 1.
 - **Between levels:** the remaining time carries over and is never reset. The clock is frozen on the completion and intro screens, and resumes when you press Start Level.
 - **Running:** hints and the Intelligence Bag do not stop it; only the pause menu does.
-- **Running out:** if it hits zero on any level, Thanos starts again from Level 2 with a fresh 3 minutes. Clues from Levels 2–4 are cleared; the Level 1 clue is kept.
-- **Pause → Restart Level:** on Levels 3 and 4 this resets only that level's puzzle, and the clock keeps going. On Level 2 it starts a new run.
+- **Running out:** if it hits zero on any level, Thanos starts again from Level 1 with a fresh 3 minutes. Clues from Levels 1–3 are cleared; the starting clue is kept.
+- **Pause → Restart Level:** on Levels 2 and 3 this resets only that level's puzzle, and the clock keeps going. On Level 1 it starts a new run.
 - **Main menu:** exiting mid-run keeps the remaining time for **Continue**.
 
-### Level 3: The Overlap Trap
+### Level 2: The Overlap Trap
 
 Two overlapping 4×4 squares, S1 = (0,0)–(4,4) and S2 = (2,2)–(6,6), each with both diagonals. The two main diagonals are collinear, so they form one continuous line.
 
@@ -89,7 +91,7 @@ The module refuses to load if the two methods disagree. The tests also check the
 - Hover a line to trace its full length.
 - An optional triangle tester: click three corners to see if they form a triangle, and mark the ones you've found. It never reveals the total.
 
-### Level 4: The Remainder Lock
+### Level 3: The Remainder Lock
 
 The lock shows a 4×4 grid of tiles 1–16 and three rules: even, remainder 2 when divided by 5, greater than 10. The safe tile (12) is derived from the rules, and every other tile is rejected with the conditions it breaks. Next comes the digit step, 1 + 2 = 3.
 
@@ -104,8 +106,8 @@ Then the escape terminal by the door asks for the final code in four segments. T
 `src/game/progress.ts` holds pure, tested reducers:
 - **Validation:** every result is validated before it is stored.
 - **No overwriting:** a wrong value can never overwrite a right one.
-- **Gating:** Level 3 needs Level 2, and the terminal stays locked until the tile and the digit are earned.
-- **Retries:** a Level 4 retry clears only Level 4's tile and digit.
+- **Gating:** Level 2 needs Level 1, and the terminal stays locked until the tile and the digit are earned.
+- **Retries:** a Level 3 retry clears only Level 3's tile and digit.
 
 The Intelligence Bag shows every earned clue across all levels. Progress lives in memory: the existing project had no save system, so a page reload starts a new game.
 
@@ -127,12 +129,12 @@ The equations are the only source of truth: the physics reads its masses from
 ```
 src/
   game/
-    config.ts      palette, level text, time limit, dev Level-1 data, rules placeholder
+    config.ts      palette, level text, time limit, dev starting-clue data, rules placeholder
     puzzle.ts      equations, solving, validation, switch-order logic   (+ puzzle.test.ts)
-    geometry.ts    Level 3 diagram + two independent triangle counters  (+ geometry.test.ts)
-    remainder.ts   Level 4 rules, safe tile, digit sum
+    geometry.ts    Level 2 diagram + two independent triangle counters  (+ geometry.test.ts)
+    remainder.ts   Level 3 rules, safe tile, digit sum
     progress.ts    cross-level progress, final code, gating, retries     (+ progress.test.ts)
-    rooms.ts       pixel-art rooms for Levels 3 and 4
+    rooms.ts       pixel-art rooms for Levels 2 and 3
     physics.ts     body movement, Balance (torque), Spring             (+ physics.test.ts)
     timer.ts       elapsed-time countdown with pause                    (tested in physics.test.ts)
     audio.ts       Web Audio ambience, music and effects; hard mute
@@ -147,7 +149,7 @@ src/
 
 ## Plugging into the full game
 
-- **Level 1 result:** `App.tsx` reads `localStorage['zerohour.level1.order']` (a JSON array such as `["TRIANGLE","SQUARE","PENTAGON"]`). If it is missing, it uses `DEV_PREVIOUS_LEVEL` from `config.ts`. You can also render `<BlueLevel previousOrder={…} />` directly.
+- **Starting clue (from the previous game):** `App.tsx` reads `localStorage['zerohour.level1.order']` (a JSON array such as `["TRIANGLE","SQUARE","PENTAGON"]`). If it is missing, it uses `DEV_PREVIOUS_LEVEL` from `config.ts`. You can also render `<BlueLevel previousOrder={…} />` directly.
 - **Rules:** `RULES_PLACEHOLDER` in `src/game/config.ts` is clearly marked as placeholder content. Replace its sections with the final rules and set `isPlaceholder: false`.
 
 ## Art and replacing the character

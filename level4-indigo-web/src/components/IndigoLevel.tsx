@@ -48,9 +48,7 @@ export default function IndigoLevel({ onComplete, onExit }: { onComplete?: () =>
         <AnimatePresence>
           {state === 'menu' && (
             <Screen key="menu" tint={0.35}>
-              <p className="font-ind text-lg font-semibold tracking-[0.5em] text-ind-soft">VIBGYOR</p>
               <h1 className="font-ind text-[clamp(52px,9vw,96px)] font-black italic tracking-[0.12em] text-ind-white [text-shadow:0_0_24px_#A066FF,0_0_60px_#6C2DC7]">INDIGO</h1>
-              <p className="font-ind text-xl font-semibold tracking-[0.3em] text-ind-lilac">{LEVEL.title}</p>
               <p className="mt-2 font-ind text-sm text-ind-pale">Thanos must pilot through the Indigo Dimension to the gate.</p>
               <div className="mt-8 flex flex-col gap-4">
                 <OrbitButton onClick={click(() => eng()?.start())} autoFocus><Play size={15} /> START</OrbitButton>
