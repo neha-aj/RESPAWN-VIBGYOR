@@ -1,4 +1,4 @@
-# VIOLET (web) — Level Violet: Ultra-Refraction
+# VIOLET (web)
 
 The web version of VIOLET: a 2D third-person neon trick-shot shooter in shades of violet. You play as Thanos.
 

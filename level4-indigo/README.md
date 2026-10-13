@@ -1,4 +1,4 @@
-# VIBGYOR · INDIGO — Orbital Singularity (Python)
+# INDIGO (Python)
 
 A 2D space-flight physics puzzle in indigo and violet. Thanos, wearing an astronaut helmet, pilots a small ship through four zones to the Indigo Gate. The style is **Vector Nebula**: soft painted nebula clouds with glowing wireframe geometry.
 

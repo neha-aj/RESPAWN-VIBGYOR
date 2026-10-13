@@ -1,4 +1,4 @@
-# VIBGYOR · GREEN — The Sylvan Abyss (Python)
+# GREEN (Python)
 
 A 2D top-down survival-horror maze, drawn only in shades of green. You play **Thanos**, lost in an ancient forest at night. Your only light is a flashlight, aimed with the mouse.
 
