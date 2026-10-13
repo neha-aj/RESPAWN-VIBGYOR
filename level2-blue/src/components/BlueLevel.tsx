@@ -1,11 +1,11 @@
 import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AudioManager } from '../game/audio';
-import { LEVEL_TIME_MS } from '../game/config';
+import { GAME_TIME_MS } from '../game/config';
 import { GameEngine, type Snapshot } from '../game/engine';
 import { TRIANGLE_COUNT } from '../game/geometry';
 import {
-  completeLevel2, completeLevel3, currentLevel, escape, initialProgress, resetLevel4, setDigitSum, setSafeTile, validateFinalCode,
+  completeLevel2, completeLevel3, currentLevel, escape, initialProgress, resetLevel4, restartRun, setDigitSum, setSafeTile, validateFinalCode,
   type LevelNo, type Progress,
 } from '../game/progress';
 import type { Shape, WeightId } from '../game/puzzle';
@@ -63,7 +63,7 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   useEffect(() => {
-    const engine = new GameEngine(canvasRef.current!, audio, { previousOrder, timeLimitMs: LEVEL_TIME_MS, onChange: setSnap });
+    const engine = new GameEngine(canvasRef.current!, audio, { previousOrder, timeLimitMs: GAME_TIME_MS, onChange: setSnap });
     engine.setPortraitCanvas(portraitRef.current);
     engineRef.current = engine;
     if (import.meta.env.DEV) (window as unknown as { __blue?: GameEngine }).__blue = engine; // dev-only test hook
@@ -74,8 +74,8 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
 
   const phase = snap?.phase ?? 'intro';
   const level: LevelNo = snap?.level ?? 2;
-  const remaining = snap?.remainingMs ?? LEVEL_TIME_MS;
-  const elapsed = LEVEL_TIME_MS - remaining;
+  const remaining = snap?.remainingMs ?? GAME_TIME_MS;
+  const levelTime = () => engineRef.current?.levelElapsedMs() ?? 0;
   const eng = () => engineRef.current;
 
   /* ---------------- flow ---------------- */
@@ -85,17 +85,27 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
     if (n === 4) { setEliminated([]); setDigit(''); setCode(NO_CODE); setCodeWrong([false, false, false, false]); setProgress(resetLevel4); }
   }, []);
 
-  const startLevel = useCallback((n: LevelNo) => {
+  /** `fresh` restarts the shared 3-minute clock (only for a new run at Level 2). */
+  const startLevel = useCallback((n: LevelNo, fresh: boolean) => {
     audio.init(); audio.setMuted(muted); audio.click();
     resetAttempt(n);
     setCard(null); setBagOpen(false); setRulesOpen(false); setExitAsk(null);
-    eng()?.start(n);
+    eng()?.start(n, fresh);
   }, [audio, muted, resetAttempt]);
 
-  const newGame = useCallback(() => { setProgress(initialProgress(previousOrder)); startLevel(2); }, [previousOrder, startLevel]);
-  const showCard = useCallback((n: 3 | 4) => { audio.softClick(); setRulesOpen(false); setBagOpen(false); eng()?.preview(n); setCard(n); }, [audio]);
-  const toMenu = useCallback(() => { setExitAsk(null); setRulesOpen(false); setBagOpen(false); setCard(null); eng()?.toMenu(); }, []);
-  const retry = useCallback(() => startLevel(level), [startLevel, level]);
+  const newGame = useCallback(() => { setProgress(initialProgress(previousOrder)); setOverlap(NO_OVERLAP); startLevel(2, true); }, [previousOrder, startLevel]);
+  // between levels the clock is frozen, not reset
+  const showCard = useCallback((n: 3 | 4) => { audio.softClick(); setRulesOpen(false); setBagOpen(false); eng()?.preview(n, true); setCard(n); }, [audio]);
+  const toMenu = useCallback(() => {
+    setExitAsk(null); setRulesOpen(false); setBagOpen(false); setCard(null);
+    const c = currentLevel(progressRef.current);
+    eng()?.toMenu(c === 3 || c === 4); // a run in progress keeps its remaining time for Continue
+  }, []);
+  /** Pause → Restart Level: Level 2 restarts the run; Levels 3–4 restart their puzzle while the clock keeps going. */
+  const restartLevel = useCallback(() => { if (level === 2) newGame(); else startLevel(level, false); }, [level, newGame, startLevel]);
+
+  // Time ran out on any level: the run is over and everything from Level 2 on is cleared.
+  useEffect(() => { if (snap?.phase === 'failed') setProgress(restartRun); }, [snap?.phase]);
 
   // Level 2 finished: store its validated result exactly once (completeLevel2 is idempotent).
   useEffect(() => {
@@ -112,7 +122,7 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
       : `${n} is not it. Check for triangles counted twice, or shapes with a side that is not actually drawn.`, 'bad', 'confused', 2.4);
   };
   const onOverlapCorrect = () => {
-    setProgress((p) => completeLevel3(p, TRIANGLE_COUNT, elapsed, snap?.hintsUsed ?? 0));
+    setProgress((p) => completeLevel3(p, TRIANGLE_COUNT, levelTime(), snap?.hintsUsed ?? 0));
     eng()?.notify(`${TRIANGLE_COUNT} triangles: correct. The passage is opening.`, 'good', 'relieved', 3);
     eng()?.overlapSolved();
   };
@@ -152,7 +162,7 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
     if (res.locked) { audio.wrong(); eng()?.notify('The terminal is still locked.', 'bad', 'confused'); return; }
     if (res.ok) {
       setCodeWrong([false, false, false, false]);
-      setProgress((p) => escape(p, code, elapsed, snap?.hintsUsed ?? 0));
+      setProgress((p) => escape(p, code, levelTime(), snap?.hintsUsed ?? 0));
       audio.powerDown();
       eng()?.escapeAccepted();
     } else {
@@ -192,7 +202,7 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
   return (
     <div className="flex h-full flex-col bg-abyss">
       <GameHeader
-        remainingMs={remaining} totalMs={LEVEL_TIME_MS} timerActive={phase === 'playing' || phase === 'paused'} stage={snap?.stage ?? 'solve'} level={level}
+        remainingMs={remaining} totalMs={GAME_TIME_MS} timerActive={phase === 'playing' || phase === 'paused'} stage={snap?.stage ?? 'solve'} level={level}
         hintsUsed={snap?.hintsUsed ?? 0} bagCount={bagCount(progress, level === 2 ? snap?.bag ?? null : null)} bagOpen={bagOpen} muted={muted} canPause={playing}
         onBag={toggleBag} onSound={toggleSound} onPause={() => eng()?.pause()} onRules={openRules}
       />
@@ -242,12 +252,12 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
                 continueLevel={continueLevel} onContinue={continueLevel ? () => showCard(continueLevel) : undefined} />
             )}
             {phase === 'intro' && card != null && !rulesOpen && (
-              <LevelIntroCard key={`card${card}`} level={card} onStart={() => startLevel(card)} onRules={openRules} onMenu={toMenu} />
+              <LevelIntroCard key={`card${card}`} level={card} onStart={() => startLevel(card, false)} onRules={openRules} onMenu={toMenu} />
             )}
             {phase === 'paused' && !rulesOpen && !exitAsk && (
-              <PauseMenu key="pause" onResume={() => eng()?.resume()} onRestart={retry} onRules={openRules} onMenu={() => setExitAsk('game')} />
+              <PauseMenu key="pause" onResume={() => eng()?.resume()} onRestart={restartLevel} onRules={openRules} onMenu={() => setExitAsk('game')} />
             )}
-            {snap?.showFailure && <FailureScreen key="fail" level={level} onRetry={retry} onMenu={toMenu} />}
+            {snap?.showFailure && <FailureScreen key="fail" level={level} onRetry={newGame} onMenu={toMenu} />}
             {snap?.showComplete && level === 2 && (
               <LevelCompleteScreen key="done2" snap={snap} onReplay={newGame} onMenu={toMenu} onContinue={progress.level2 ? () => showCard(3) : undefined} />
             )}

@@ -5,7 +5,7 @@
 A 2D pixel-art underwater puzzle level. You are Thanos: work out three unknown
 weights with algebra, watch a torque-driven balance confirm them, press three
 pressure switches from lightest to heaviest, and escape the flooding chamber
-within 90 seconds. Everything is drawn in shades of blue.
+before the clock runs out. Everything is drawn in shades of blue.
 
 ## Run it
 
@@ -53,7 +53,18 @@ A = 17 − 13 = 4,  B = 17 − 10 = 7,  C = 17 − 11 = 6
 
 ## Levels 3 and 4 (continuation)
 
-After BLUE's balance chamber, the game continues through two more rooms. Each has its own 90-second clock, hints, rules and Thanos reactions, and failing one restarts only that level.
+After BLUE's balance chamber, the game continues through two more rooms, each with its own hints, rules and Thanos reactions.
+
+## The clock
+
+One **3-minute clock** covers Levels 2, 3 and 4 together (`GAME_TIME_MS` in `src/game/config.ts`).
+
+- **Start:** the clock begins when you press Start Level on Level 2.
+- **Between levels:** the remaining time carries over and is never reset. The clock is frozen on the completion and intro screens, and resumes when you press Start Level.
+- **Running:** hints and the Intelligence Bag do not stop it; only the pause menu does.
+- **Running out:** if it hits zero on any level, Thanos starts again from Level 2 with a fresh 3 minutes. Clues from Levels 2–4 are cleared; the Level 1 clue is kept.
+- **Pause → Restart Level:** on Levels 3 and 4 this resets only that level's puzzle, and the clock keeps going. On Level 2 it starts a new run.
+- **Main menu:** exiting mid-run keeps the remaining time for **Continue**.
 
 ### Level 3: The Overlap Trap
 

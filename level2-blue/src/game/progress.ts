@@ -55,7 +55,10 @@ export function setDigitSum(p: Progress, d: number): Progress {
   return { ...p, level4: { ...p.level4, digitSum: d } };
 }
 
-/** Retrying Level 4 clears only Level 4's temporary results. */
+/** Time ran out anywhere: the whole run restarts at Level 2. Only the Level 1 clue survives. */
+export const restartRun = (p: Progress): Progress => initialProgress(p.previousOrder);
+
+/** Restarting Level 4 from the pause menu clears only Level 4's temporary results. */
 export function resetLevel4(p: Progress): Progress {
   return p.level4.escaped ? p : { ...p, level4: { tile: null, digitSum: null, escaped: false }, hints: { ...p.hints, 4: 0 } };
 }

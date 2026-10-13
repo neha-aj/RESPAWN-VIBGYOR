@@ -26,6 +26,14 @@ export class CountdownTimer {
     this.paused = false;
   }
 
+  /** Carry on a clock that was stopped between levels (or paused), keeping the time already used. */
+  continueRun() {
+    if (this.running && !this.paused) return;
+    if (this.paused) { this.resume(); return; }
+    this.startedAt = this.now(); this.running = true; this.paused = false;
+  }
+
+  get hasStarted() { return this.running || this.banked > 0; }
   get isRunning() { return this.running && !this.paused; }
   get isPaused() { return this.paused; }
 

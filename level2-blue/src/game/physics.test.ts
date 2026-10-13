@@ -81,6 +81,23 @@ describe('countdown timer', () => {
     timer.start(); t = 70_000; timer.start();
     expect(timer.remaining()).toBe(90_000);
   });
+  it('one shared clock carries across levels: stopping between levels keeps the time used', () => {
+    let t = 0; const timer = new CountdownTimer(180_000, () => t);
+    timer.start(); t = 50_000;          // Level 2 takes 50 s
+    timer.stop(); t = 200_000;          // completion screen + intro card: frozen
+    expect(timer.remaining()).toBe(130_000);
+    timer.continueRun(); t = 230_000;   // Level 3 takes 30 s
+    expect(timer.remaining()).toBe(100_000);
+    timer.pause(); t = 999_000; timer.continueRun(); t = 1_009_000; // pause, then continue
+    expect(timer.remaining()).toBe(90_000);
+  });
+  it('a new run restarts the full 3 minutes', () => {
+    let t = 0; const timer = new CountdownTimer(180_000, () => t);
+    timer.start(); t = 170_000; timer.stop();
+    expect(timer.hasStarted).toBe(true);
+    timer.start();
+    expect(timer.remaining()).toBe(180_000);
+  });
   it('formats the display', () => {
     expect(formatTime(90_000)).toBe('1:30');
     expect(formatTime(9_420)).toBe('9.4');

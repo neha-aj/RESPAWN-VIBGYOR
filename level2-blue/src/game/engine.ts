@@ -39,7 +39,7 @@ export interface Snapshot {
   consoleOpen: boolean; weighing: boolean; verdicts: Record<WeightId, WeightVerdict | 'unknown'>;
   switchProgress: WeightId[]; message: GameMessage | null; hintsUsed: number; bag: Bag;
   showFailure: boolean; showComplete: boolean;
-  stats: { timeMs: number; hints: number; wrongSubmissions: number; wrongSwitches: number };
+  stats: { timeMs: number; totalMs: number; hints: number; wrongSubmissions: number; wrongSwitches: number };
 }
 export interface EngineOptions { previousOrder: readonly Shape[]; timeLimitMs: number; onChange: (s: Snapshot) => void }
 
@@ -104,6 +104,7 @@ export class GameEngine {
   private failT = 0;
   private completeT = 0;
   private finalTime = 0;
+  private levelStart = 0; // shared clock reading when this level began
   private flash = 0;
   private shake = 0;
 
@@ -150,21 +151,33 @@ export class GameEngine {
   }
 
   /* ================= public flow ================= */
-  start(level: LevelNo = this.level) {
+  /**
+   * One clock is shared by Levels 2–4. `fresh` (a new run) restarts it at the full limit;
+   * otherwise it carries on from the time already used.
+   */
+  start(level: LevelNo = this.level, fresh = level === 2) {
     this.level = level;
-    this.resetLevelState(); this.phase = 'playing'; this.timer.start();
+    this.resetLevelState(); this.phase = 'playing';
+    if (fresh || !this.timer.hasStarted) this.timer.start(); else this.timer.continueRun();
+    this.levelStart = this.timer.elapsed();
     this.say(level === 2 ? 'Thanos enters the chamber. The console on the left holds the equations.'
       : level === 3 ? 'A sealed geometric panel blocks the passage. Walk to the monitor and press E to inspect it.'
         : 'The final chamber. Use the lock panel to find the safe tile, then the escape terminal by the door.', 'info');
     this.emit(true);
   }
   /** Show a level's room behind a menu or intro card without starting its timer. */
-  preview(level: LevelNo) { this.level = level; this.timer.reset(); this.resetLevelState(); this.phase = 'intro'; this.emit(true); }
+  preview(level: LevelNo, keepClock = false) {
+    this.level = level;
+    if (keepClock) this.timer.stop(); else this.timer.reset(); // between levels the shared clock is frozen, not reset
+    this.resetLevelState(); this.phase = 'intro'; this.emit(true);
+  }
   get currentLevel() { return this.level; }
+  /** Time spent in the current level on the shared clock. */
+  levelElapsedMs() { return this.timer.elapsed() - this.levelStart; }
   restart() { this.start(); }
   pause() { if (this.phase !== 'playing') return; this.phase = 'paused'; this.timer.pause(); this.keys.clear(); this.emit(true); }
   resume() { if (this.phase !== 'paused') return; this.phase = 'playing'; this.timer.resume(); this.last = performance.now(); this.emit(true); }
-  toMenu() { this.preview(2); }
+  toMenu(keepClock = false) { this.preview(2, keepClock); }
 
   /* ---- stations (Levels 3-4) ---- */
   openStation() {
@@ -184,7 +197,7 @@ export class GameEngine {
   overlapSolved() {
     if (this.level !== 3 || this.phase !== 'playing' || this.stage !== 'solve') return;
     this.stage = 'exit'; this.station = null; this.solvedT = 0; this.keys.clear();
-    this.finalTime = this.timer.elapsed(); this.timer.stop();
+    this.finalTime = this.timer.elapsed() - this.levelStart; this.timer.stop();
     this.door.target = -(DOOR.h + 2); this.autoExit = true;
     this.audio.correct(); window.setTimeout(() => this.audio.doorUnlock(), 500);
     this.flash = 0.35; this.shake = 0.4; this.react('relieved', 3);
@@ -402,7 +415,7 @@ export class GameEngine {
 
   private complete() {
     if (this.phase === 'complete') return;
-    this.phase = 'complete'; if (this.timer.isRunning) this.finalTime = this.timer.elapsed(); this.timer.stop(); this.autoExit = false; this.keys.clear();
+    this.phase = 'complete'; if (this.timer.isRunning) this.finalTime = this.timer.elapsed() - this.levelStart; this.timer.stop(); this.autoExit = false; this.keys.clear();
     this.body.vx = 0; this.completeT = 0; this.flash = 0.6;
     this.audio.victory();
     this.say(this.level === 2 ? `BLUE cleared. Sequence ${this.bag.sequence} secured.` : this.level === 3 ? 'The Overlap Trap is open. Thanos moves deeper.' : 'Escape code accepted. Security is powering down.', 'good');
@@ -615,12 +628,12 @@ export class GameEngine {
     return {
       level: this.level, station: this.station,
       phase: this.phase, stage: this.stage,
-      remainingMs: this.phase === 'intro' ? this.opts.timeLimitMs : Math.round(this.timer.remaining() / 100) * 100,
+      remainingMs: Math.round(this.timer.remaining() / 100) * 100,
       expression: this.expression(), near: this.near, consoleOpen: this.consoleOpen, weighing: this.weighing, verdicts,
       switchProgress: this.seq.progress.slice(), message: this.message, hintsUsed: this.hintsUsed, bag: this.bag,
       showFailure: this.phase === 'failed' && this.failT > 2.4,
       showComplete: this.phase === 'complete' && this.completeT > 1.8,
-      stats: { timeMs: this.finalTime, hints: this.hintsUsed, wrongSubmissions: this.wrongSubmissions, wrongSwitches: this.wrongSwitches },
+      stats: { timeMs: this.finalTime, totalMs: this.timer.elapsed(), hints: this.hintsUsed, wrongSubmissions: this.wrongSubmissions, wrongSwitches: this.wrongSwitches },
     };
   }
 

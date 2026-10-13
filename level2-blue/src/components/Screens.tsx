@@ -18,6 +18,7 @@ export function LevelIntro({ onStart, onRules, onExit, continueLevel, onContinue
       <p className="mt-5 font-pixel text-[12px] tracking-[0.3em] text-pale">LEVEL {LEVEL.number}: {LEVEL.name}</p>
       <p className="mt-3 font-term text-2xl text-electric">{LEVEL.tagline}</p>
       <p className="mt-4 max-w-[620px] font-term text-xl leading-snug text-pale/90">{LEVEL.story}</p>
+      <p className="mt-2 font-term text-lg text-primary">Three levels. One 3-minute clock. Run out, and it all starts again.</p>
       <div className="mt-6 flex flex-col gap-4">
         {continueLevel && onContinue ? (
           <>
@@ -87,9 +88,9 @@ export function FailureScreen({ onRetry, onMenu, level = 2 }: { onRetry: () => v
       <div className="flex flex-col items-center text-center">
         <Waves size={40} className="text-electric" aria-hidden />
         <h2 className="mt-3 font-pixel text-[14px] leading-relaxed text-ice">TIME EXPIRED — THANOS MUST TRY AGAIN</h2>
-        <p className="mt-3 font-term text-xl text-pale">{LEVEL_INFO[level].failText} The chamber flooded. Level {level} restarts from the beginning; clues from earlier levels are kept.</p>
+        <p className="mt-3 font-term text-xl text-pale">{LEVEL_INFO[level].failText} The 3-minute clock ran out and the chamber flooded. Thanos must start again from Level 2; clues from this run are cleared.</p>
         <div className="mt-5 flex gap-4">
-          <PixelButton onClick={onRetry} autoFocus><RotateCcw size={12} className="mr-2 inline" aria-hidden />Retry Level {level}</PixelButton>
+          <PixelButton onClick={onRetry} autoFocus><RotateCcw size={12} className="mr-2 inline" aria-hidden />Restart from Level 2</PixelButton>
           <PixelButton variant="ghost" onClick={onMenu}>Main Menu</PixelButton>
         </div>
       </div>
@@ -110,7 +111,8 @@ export function LevelCompleteScreen({ snap, onReplay, onMenu, onContinue }: { sn
           {snap.bag.sequence}
         </motion.p>
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 font-term text-xl">
-          <dt className="text-primary">Time</dt><dd className="text-ice">{formatTime(s.timeMs)}</dd>
+          <dt className="text-primary">Level time</dt><dd className="text-ice">{formatTime(s.timeMs)}</dd>
+          <dt className="text-primary">Clock left</dt><dd className="text-ice">{formatTime(snap.remainingMs)}</dd>
           <dt className="text-primary">Hints used</dt><dd className="text-ice">{s.hints}/3</dd>
           <dt className="text-primary">Wrong weighings</dt><dd className="text-ice">{s.wrongSubmissions}</dd>
           <dt className="text-primary">Switch resets</dt><dd className="text-ice">{s.wrongSwitches}</dd>
@@ -136,7 +138,7 @@ export function LevelIntroCard({ level, onStart, onRules, onMenu }: { level: 3 |
       <h1 className="mt-4 font-pixel text-[clamp(26px,4.4vw,48px)] leading-tight text-cyan drop-shadow-[0_0_14px_#258BFF]">{info.title}</h1>
       <p className="mt-3 font-term text-2xl text-electric">{info.subtitle}</p>
       <p className="mt-4 max-w-[640px] font-term text-xl leading-snug text-pale/90">{info.story}</p>
-      <p className="mt-2 font-term text-lg text-primary">90 seconds. Hints and the Intelligence Bag never stop the clock.</p>
+      <p className="mt-2 font-term text-lg text-primary">The 3-minute clock carries over from the last level. It is frozen on this screen and resumes when you start.</p>
       <div className="mt-6 flex flex-col gap-4">
         <PixelButton onClick={onStart} autoFocus className="w-64"><Play size={12} className="mr-2 inline" aria-hidden />Start Level</PixelButton>
         <PixelButton variant="ghost" onClick={onRules} className="w-64"><BookOpen size={12} className="mr-2 inline" aria-hidden />Rules</PixelButton>
@@ -191,7 +193,7 @@ export function VictoryScreen({ progress, onRestart, onMenu }: { progress: Progr
             <div key={n} className="text-left"><dt className="text-primary">L{n} · {LEVEL_INFO[n].title}</dt><dd className="text-ice">✓ {progress.times[n] != null ? formatTime(progress.times[n]!) : '—'} · hints {progress.hints[n]}/3</dd></div>
           ))}
         </dl>
-        <p className="mt-2 font-term text-lg text-primary">Levels completed: 3 of 3 · Total hints used: {totalHints}</p>
+        <p className="mt-2 font-term text-lg text-primary">Levels completed: 3 of 3 · Total time: {formatTime((progress.times[2] ?? 0) + (progress.times[3] ?? 0) + (progress.times[4] ?? 0))} of 3:00 · Total hints used: {totalHints}</p>
         <div className="mt-5 flex gap-4">
           <PixelButton onClick={onRestart} autoFocus><RotateCcw size={12} className="mr-2 inline" aria-hidden />Restart Game</PixelButton>
           <PixelButton variant="ghost" onClick={onMenu}>Main Menu</PixelButton>

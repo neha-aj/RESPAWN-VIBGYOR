@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEV_PREVIOUS_LEVEL } from './config';
 import { TRIANGLE_COUNT } from './geometry';
 import {
-  completeLevel2, completeLevel3, currentLevel, escape, finalCode, finalSegments, initialProgress, resetLevel4,
+  completeLevel2, completeLevel3, currentLevel, escape, finalCode, finalSegments, initialProgress, resetLevel4, restartRun,
   setDigitSum, setSafeTile, validateFinalCode, type Progress,
 } from './progress';
 import { GRID_NUMBERS, LOCK_RULES, SAFE_TILE, digitSum, explainRejection, satisfiesAll, violatedRules } from './remainder';
@@ -87,6 +87,17 @@ describe('final escape protocol', () => {
     expect(escape(p, CODE, 99, 3)).toBe(p);
   });
   it('rejects a wrong code without escaping', () => { expect(escape(throughLock(), ['467', '22', '12', '9'], 1, 0).level4.escaped).toBe(false); });
+});
+
+describe('running out of time', () => {
+  it('restarts the whole run at Level 2, keeping only the Level 1 clue', () => {
+    const p = restartRun(throughLock());
+    expect(currentLevel(p)).toBe(2);
+    expect(p.level2).toBeNull();
+    expect(p.level3).toBeNull();
+    expect(p.level4).toEqual({ tile: null, digitSum: null, escaped: false });
+    expect(p.previousOrder).toEqual(DEV_PREVIOUS_LEVEL.geometricOrder);
+  });
 });
 
 describe('retry rules', () => {
