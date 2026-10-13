@@ -7,18 +7,18 @@ const vars = (v: Record<string, string | number>) => v as CSSProperties;
 /**
  * The spectrum card between chapters: the V-I-B-G-Y-O-R strip, colours already won lit,
  * the new one flaring up, and its name settling in above.
- * `finale` lights the whole strip one band after another.
+ * `finale` lights the whole strip one band after another, with no words: the ending
+ * sequence (still to come) takes over from there.
  */
 export function SpectrumCard({ band, leaving, finale }: { band: number; leaving: boolean; finale?: boolean }) {
-  const name = finale ? 'SPECTRUM RESTORED' : SPECTRUM[band].name;
-  const color = finale ? '#FFFFFF' : SPECTRUM[band].color;
+  const name = SPECTRUM[band].name;
   return (
-    <div className={`card${leaving ? ' leaving' : ''}${finale ? ' finale' : ''}`} style={vars({ '--c': color })} aria-live="polite">
-      <div className="card-name" aria-label={name}>
-        {[...name].map((ch, i) => (
-          <span key={i} style={vars({ '--i': i })} aria-hidden>{ch === ' ' ? ' ' : ch}</span>
-        ))}
-      </div>
+    <div className={`card${leaving ? ' leaving' : ''}`} style={vars({ '--c': SPECTRUM[band].color })} aria-live="polite">
+      {!finale && (
+        <div className="card-name" aria-label={name}>
+          {[...name].map((ch, i) => <span key={i} style={vars({ '--i': i })} aria-hidden>{ch}</span>)}
+        </div>
+      )}
       <div className="strip">
         {SPECTRUM.map((b, i) => {
           const state = finale ? 'ignite' : i < band ? 'lit' : i === band ? 'ignite' : 'off';

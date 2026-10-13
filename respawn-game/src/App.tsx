@@ -15,6 +15,20 @@ import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
  *   the next level loads behind it) ─► colour bloom + iris opens on the new level
  */
 
+/**
+ * A level that loaded hidden (behind a video) could not take focus, so its React
+ * `autoFocus` (e.g. the START button) silently did nothing. Once the level is revealed,
+ * focus that element so ENTER works as it does when the level runs on its own.
+ */
+function restoreAutofocus(doc: Document | null | undefined) {
+  if (!doc || (doc.activeElement && doc.activeElement !== doc.body)) return;
+  for (const el of Array.from(doc.querySelectorAll<HTMLElement>('button, input, [tabindex]'))) {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactProps'));
+    const props = key ? (el as unknown as Record<string, { autoFocus?: boolean }>)[key] : null;
+    if (props?.autoFocus) { el.focus(); return; }
+  }
+}
+
 type Signal = 'complete' | 'continue' | 'videoEnd';
 const CANCEL = Symbol('cancel');
 
@@ -73,7 +87,10 @@ export default function App() {
       if (timeoutMs) setTimeout(() => { if (waiter.current?.kind === kind) { waiter.current = null; done(); } }, timeoutMs);
     });
 
-    const focusLevel = () => { const f = frameRef.current; f?.focus(); f?.contentWindow?.focus(); };
+    const focusLevel = () => {
+      const f = frameRef.current; f?.focus(); f?.contentWindow?.focus();
+      try { restoreAutofocus(f?.contentDocument); } catch { /* not ready: the player can still click */ }
+    };
 
     async function openOnto(color: string, ms: number) {
       setIris({ d: IRIS_SHUT, ms: 0, color, ring: true });
@@ -102,8 +119,8 @@ export default function App() {
       if (ch.video && ch.band !== null) {
         // spectrum card: the new colour ignites
         setCard({ band: ch.band, leaving: false });
-        await sleep(520); sfx.ignite(ch.band);
-        await sleep(2300);
+        await sleep(500); sfx.ignite(ch.band);
+        await sleep(1950);
         // video, with the level loading (hidden) behind it
         latched.current.delete('videoEnd');
         setLevel({ idx: i, visible: false });
