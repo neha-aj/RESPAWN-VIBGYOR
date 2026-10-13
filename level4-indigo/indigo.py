@@ -1,5 +1,5 @@
 """
-VIBGYOR · INDIGO — Orbital Singularity
+INDIGO
 2D space-flight physics puzzle. Thanos, in an astronaut helmet, pilots a small
 ship through gravity wells, laser barriers and ricochet walls to the Indigo Gate.
 
@@ -215,8 +215,7 @@ class HUD:
         img = font.render(txt, True, col); r = img.get_rect(**{anchor: pos}); surf.blit(img, r); return r
     def draw(s, surf, glow, g):
         pg.draw.rect(surf, BG, (0, 0, W, TOP - 4)); pg.draw.line(glow, LASER, (0, TOP - 5), (W, TOP - 5), 2)
-        s.text(surf, "VIBGYOR / INDIGO", s.f_sm, PALE, (12, 14), "midleft")
-        s.text(surf, "ORBITAL SINGULARITY", s.f_sm, SOFT, (12, 34), "midleft")
+        s.text(surf, "INDIGO", s.f_mid, PALE, (12, 24), "midleft")
         s.text(surf, "LIVES", s.f_sm, SOFT, (205, 14), "midleft")
         for i in range(LIVES):
             c = PORTAL if i < g.lives else DEEP; cx = 212 + i * 20
@@ -240,7 +239,7 @@ class HUD:
 class Game:
     def __init__(s, headless=False):
         pg.init()
-        s.screen = pg.display.set_mode((W, H)); pg.display.set_caption("VIBGYOR · INDIGO — Orbital Singularity")
+        s.screen = pg.display.set_mode((W, H)); pg.display.set_caption("INDIGO")
         s.clock = pg.time.Clock()
         name = next((n for n in ("agencyfb", "eurostile", "bahnschrift", "segoeui", "consolas") if pg.font.match_font(n)), None)
         s.f_big, s.f_mid, s.f_sm = pg.font.SysFont(name, 60, bold=True), pg.font.SysFont(name, 28, bold=True), pg.font.SysFont(name, 17)
@@ -493,9 +492,8 @@ class Game:
             s.hud.text(sc, label, s.f_mid, WHITE if hov else PALE, r.center); s.buttons[key] = r
         if s.state == "menu":
             overlay(120)
-            s.hud.text(sc, "VIBGYOR", s.f_mid, SOFT, (W // 2, 120)); s.hud.text(sc, "INDIGO", s.f_big, WHITE, (W // 2, 180))
+            s.hud.text(sc, "INDIGO", s.f_big, WHITE, (W // 2, 180))
             s.hud.text(g, "INDIGO", s.f_big, PORTAL, (W // 2, 180))
-            s.hud.text(sc, "ORBITAL SINGULARITY", s.f_mid, LILAC, (W // 2, 232))
             s.hud.text(sc, "Thanos must pilot through the Indigo Dimension to the gate.", s.f_sm, PALE, (W // 2, 268))
             button("start", "START  (ENTER / SPACE)", 340, 320); button("rules", "RULES", 400); button("exit", "EXIT", 460)
             draw_helmet_thanos(sc, (W // 2 + 270, 190), 60, "focus", s.t)
