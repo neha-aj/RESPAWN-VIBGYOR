@@ -9,8 +9,11 @@ import '@fontsource/exo-2/700-italic.css';
 import './index.css';
 import IndigoLevel from './components/IndigoLevel';
 
+/** When running inside the full game, tell the host this level is done. */
+const notifyComplete = () => { if (window.parent !== window) window.parent.postMessage({ type: 'respawn:complete', level: 'indigo' }, '*'); };
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <IndigoLevel />
+    <IndigoLevel onComplete={notifyComplete} />
   </React.StrictMode>,
 );

@@ -30,7 +30,7 @@ describe('identity and palette', () => {
     }
     expect(bad).toEqual([]);
     expect([C.BG, C.FLOOR, C.PLAYER, C.MONK, C.FX, C.ENERGY, C.DOOR]).toEqual([[77, 61, 0], [128, 102, 0], [255, 255, 0], [153, 128, 0], [255, 255, 204], [255, 234, 0], [255, 254, 224]]);
-    expect(VICTORY_TEXT).toBe('PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: BLUE');
+    expect(VICTORY_TEXT).toBe('PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: ORANGE');
     expect(readFileSync(join(__dirname, 'render.ts'), 'utf8')).toContain("this.text('YELLOW', 72");
   });
 });

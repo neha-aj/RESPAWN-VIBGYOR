@@ -26,7 +26,9 @@ const EMPTY = { A: '', B: '', C: '' } as Record<WeightId, string>;
 const NO_OVERLAP: OverlapState = { marked: [], answer: '' };
 const NO_CODE = ['', '', '', ''];
 
-export default function BlueLevel({ previousOrder }: { previousOrder: readonly Shape[] }) {
+/** onComplete — called once when the final escape succeeds (the victory screen appears). */
+export default function BlueLevel({ previousOrder, onComplete }: { previousOrder: readonly Shape[]; onComplete?: () => void }) {
+  const completeRef = useRef(onComplete); completeRef.current = onComplete;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const portraitRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -103,6 +105,10 @@ export default function BlueLevel({ previousOrder }: { previousOrder: readonly S
   }, []);
   /** Pause → Restart Level: Level 2 restarts the run; Levels 3–4 restart their puzzle while the clock keeps going. */
   const restartLevel = useCallback(() => { if (level === 2) newGame(); else startLevel(level, false); }, [level, newGame, startLevel]);
+
+  // The final escape: tell the host once, as the victory screen appears.
+  const escaped = !!snap?.showComplete && level === 4 && progress.level4.escaped;
+  useEffect(() => { if (escaped) completeRef.current?.(); }, [escaped]);
 
   // Time ran out on any level: the run is over and everything from Level 2 on is cleared.
   useEffect(() => { if (snap?.phase === 'failed') setProgress(restartRun); }, [snap?.phase]);

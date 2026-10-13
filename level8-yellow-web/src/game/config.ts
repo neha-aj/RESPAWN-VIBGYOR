@@ -40,7 +40,7 @@ export const ENEMY_ATTACK_GAP = 40;
 export const DEFEAT_T = 90, BARRIER_T = 120, CRACK_T = 60, REVEAL_T = 100, VICTORY_FLASH = 40;
 export const PORTAL_X = 421, PORTAL_HALF = 13;
 export const INTRO_LINES = ['Claws of metal, little mutant. Mine are made of stone.', 'FIGHT!'];
-export const VICTORY_TEXT = 'PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: BLUE';
+export const VICTORY_TEXT = 'PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: ORANGE';
 
 export interface Pose { lean: number; fs: number; fe: number; bs: number; be: number; fh: number; fk: number; bh: number; bk: number; dy: number }
 const P0: Pose = { lean: 0.05, fs: 0.5, fe: 0.9, bs: 0.25, be: 0.7, fh: 0.22, fk: 0.15, bh: -0.22, bk: 0.25, dy: 0 };
