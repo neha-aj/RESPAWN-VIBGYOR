@@ -1,7 +1,7 @@
 /* ORANGE simulation — typing & scoring, the procedural dancer, stage state and the game state machine. Mirrors orange.py. */
 import {
   BEAT, C, CHALLENGE, CHOREO, DANCER_X, DOOR_T, ENTRY_T, FA, GROUND, HIPW, MAX_PARTICLES, POSES, SH, SHW, TARGET_ACC, TARGET_WPM, TH, TORSO, UA,
-  VICTORY_DANCE_T, WORDS, type Pose, type RGB,
+  VICTORY_DANCE_T, SENTENCES, TYPABLE, type Pose, type RGB,
 } from './config';
 
 export type State = 'TITLE' | 'RULES' | 'READY' | 'PLAYING' | 'PAUSED' | 'VICTORY_DANCE' | 'DOOR_OPENING' | 'PORTAL_ENTRY' | 'TRANSITION_SCREEN' | 'GAME_OVER';
@@ -9,25 +9,41 @@ export type Sound = 'wrong' | 'word' | 'cheer' | 'pace' | 'tick' | 'go' | 'fail'
 export type Expr = 'focus' | 'smug' | 'grin' | 'wince' | 'exhausted' | 'victory';
 type Pt = [number, number];
 
-/** One active word at a time. Accuracy counts every keystroke ever made; WPM counts kept correct letters / 5. */
+/** One sentence at a time, typed character by character (spaces count, as in standard WPM).
+ *  Accuracy counts every keystroke ever made; WPM counts kept correct characters / 5.
+ *  Sentences come from a shuffled deck that survives restarts, so none repeats until all have been used. */
 export class Typing {
-  correct = 0; wrong = 0; net = 0; words = 0; streak = 0; best = 0; recent: string[] = []; word = ''; pos = 0;
+  correct = 0; wrong = 0; net = 0; words = 0; sentences = 0; streak = 0; best = 0; done = ''; text = ''; pos = 0;
+  private deck: string[] = []; private last: string | null = null;
   constructor(private rnd: () => number = Math.random) { this.reset(); }
-  reset() { this.correct = this.wrong = this.net = this.words = this.streak = this.best = 0; this.recent = []; this.word = this.pick(); this.pos = 0; }
-  pick() { const opts = WORDS.filter((w) => !this.recent.slice(-6).includes(w)); const w = opts[Math.floor(this.rnd() * opts.length)]; this.recent.push(w); return w; }
+  reset() { this.correct = this.wrong = this.net = this.words = this.sentences = this.streak = this.best = 0; this.done = ''; this.text = this.pick(); this.pos = 0; }
+  pick() {
+    if (!this.deck.length) {
+      this.deck = [...SENTENCES];
+      for (let i = this.deck.length - 1; i > 0; i--) { const j = Math.floor(this.rnd() * (i + 1)); [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]]; }
+      if (this.deck[this.deck.length - 1] === this.last) this.deck.unshift(this.deck.pop()!);   // never the same line twice in a row
+    }
+    this.last = this.deck.pop()!;
+    return this.last;
+  }
   get attempts() { return this.correct + this.wrong; }
   accuracy() { return this.attempts === 0 ? 100 : (this.correct / this.attempts) * 100; }
   wpm(elapsed: number) { return elapsed <= 0 ? 0 : (this.net * 12) / elapsed; }
-  press(ch: string): 'correct' | 'word' | 'wrong' {
-    if (ch === this.word[this.pos]) {
+  press(ch: string): 'correct' | 'word' | 'sentence' | 'wrong' {
+    if (ch === this.text[this.pos]) {
       this.correct++; this.net++; this.pos++; this.streak++; this.best = Math.max(this.best, this.streak);
-      if (this.pos === this.word.length) { this.words++; this.word = this.pick(); this.pos = 0; return 'word'; }
+      if (this.pos === this.text.length) { this.words++; this.sentences++; this.done = this.text; this.text = this.pick(); this.pos = 0; return 'sentence'; }
+      if (ch === ' ') { this.words++; return 'word'; }
       return 'correct';
     }
     this.wrong++; this.streak = 0;
     return 'wrong';
   }
-  backspace() { if (this.pos === 0) return false; this.pos--; this.net--; return true; }   // completed words can never be erased
+  backspace() {                                                   // finished sentences can never be erased
+    if (this.pos === 0) return false;
+    this.pos--; this.net--; if (this.text[this.pos] === ' ') this.words--;
+    return true;
+  }
 }
 
 export class Dancer {
@@ -129,7 +145,7 @@ export class OrangeGame {
   keyChar(raw: string) {
     if (this.state !== 'PLAYING') return;
     const ch = raw.toUpperCase();
-    if (ch.length !== 1 || ch < 'A' || ch > 'Z') return;
+    if (ch.length !== 1 || !TYPABLE.has(ch)) return;
     const tp = this.typing, d = this.dancer, res = tp.press(ch);
     if (res === 'wrong') { d.miss(); this.errT = 0.35; this.sfx('wrong', 0.6); this.energy = Math.max(0, this.energy - 0.15); return; }
     this.keyNote(tp.streak);
@@ -137,10 +153,13 @@ export class OrangeGame {
     for (let i = 0; i < 2; i++) this.tiles[Math.floor(Math.random() * 5)][Math.floor(Math.random() * 8)] = 1;
     this.fx.burst(d.x, GROUND - 40, 3, 50, [C.AMBER, C.HI, C.SPOT], [0.2, 0.5], 60, true);
     if (res === 'word') {
-      d.wordAccent(tp.words); this.sfx('word', 0.6); this.pulse = 1;
-      this.wordPop = { word: tp.recent[tp.recent.length - 2] ?? '', t: 0 };
-      this.fx.burst(d.x, GROUND - 50, 14, 120, [C.DOOR, C.LAMBER, C.AMBER], [0.4, 0.9], 80, true);
-      if (tp.words % 5 === 0) this.sfx('cheer', 0.35);
+      d.wordAccent(tp.words); this.sfx('word', 0.4); this.pulse = 1;
+      this.fx.burst(d.x, GROUND - 50, 8, 100, [C.DOOR, C.LAMBER, C.AMBER], [0.3, 0.8], 80, true);
+    } else if (res === 'sentence') {                              // the biggest accent: jump + spin + cheer
+      d.target = { ...POSES.jump }; d.kick = 2.4; d.hold = 0.6; d.spinV = (Math.PI * 2) / 0.5; d.say('grin', 0.8);
+      this.sfx('word', 0.7); this.sfx('cheer', 0.45); this.pulse = 1;
+      this.wordPop = { word: tp.done, t: 0 };
+      this.fx.burst(d.x, GROUND - 50, 24, 140, [C.DOOR, C.LAMBER, C.AMBER], [0.4, 1], 80, true);
     }
     d.shades = tp.streak >= 12 || this.liveWpm() >= TARGET_WPM;
   }
@@ -152,7 +171,7 @@ export class OrangeGame {
     this.fx.update(dt); this.pulse *= Math.exp(-dt * 6); this.hype *= Math.exp(-dt * 4); this.errT -= dt; this.flash = Math.max(0, this.flash - dt);
     for (const row of this.tiles) for (let i = 0; i < 8; i++) row[i] *= Math.exp(-dt * 3);
     this.toasts = this.toasts.map((x) => ({ ...x, left: x.left - dt })).filter((x) => x.left > 0);
-    if (this.wordPop) { this.wordPop.t += dt; if (this.wordPop.t >= 0.4) this.wordPop = null; }
+    if (this.wordPop) { this.wordPop.t += dt; if (this.wordPop.t >= 0.6) this.wordPop = null; }
     const st = this.state, d = this.dancer;
     d.update(dt, this.t, st !== 'GAME_OVER');
     if (st === 'TITLE' || st === 'READY' || st === 'RULES') d.baseExpr = 'smug';
@@ -162,7 +181,7 @@ export class OrangeGame {
       const left = CHALLENGE - this.elapsed, sec = Math.ceil(left);
       if (sec < this.lastTick && sec <= 5 && left > 0) { this.lastTick = sec; this.sfx('tick', 0.5); }
       this.energy *= Math.exp(-dt * 0.3);
-      if (!this.paceHit && this.elapsed > 3 && this.liveWpm() >= TARGET_WPM && this.typing.accuracy() >= TARGET_ACC) { this.paceHit = true; this.sfx('pace', 0.5); this.toast('60 WPM PACE!'); }
+      if (!this.paceHit && this.elapsed > 3 && this.liveWpm() >= TARGET_WPM && this.typing.accuracy() >= TARGET_ACC) { this.paceHit = true; this.sfx('pace', 0.5); this.toast('40 WPM PACE!'); }
       d.baseExpr = this.typing.streak >= 5 ? 'smug' : 'focus';
       if (this.elapsed >= CHALLENGE) this.finish();
     } else if (st === 'VICTORY_DANCE') {

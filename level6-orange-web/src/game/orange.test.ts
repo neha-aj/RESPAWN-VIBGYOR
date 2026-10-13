@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { C, CHALLENGE, DANCER_X, DOOR_T, ENTRY_T, FONT, POSES, VICTORY_DANCE_T } from './config';
+import { C, CHALLENGE, DANCER_X, DOOR_T, ENTRY_T, FONT, POSES, SENTENCES, TYPABLE, VICTORY_DANCE_T, wrap } from './config';
 import { OrangeGame, Typing } from './sim';
 
 const files: string[] = [];
@@ -14,7 +14,7 @@ function bot(cps: number, errEvery = 0) {
   const g = new OrangeGame(); g.keyEnter(); g.keyEnter();
   let t = 0, nxt = 0, n = 0;
   while (g.state === 'PLAYING' && t < CHALLENGE + 1) {
-    if (t >= nxt) { n++; const want = g.typing.word[g.typing.pos]; g.keyChar(errEvery && n % errEvery === 0 ? (want === 'Q' ? 'Z' : 'Q') : want); nxt += 1 / cps; }
+    if (t >= nxt) { n++; const want = g.typing.text[g.typing.pos]; g.keyChar(errEvery && n % errEvery === 0 ? (want === 'Q' ? 'Z' : 'Q') : want); nxt += 1 / cps; }
     g.step(1 / 60); t += 1 / 60;
   }
   return g;
@@ -48,14 +48,19 @@ describe('scoring', () => {
   it('WPM = correct letters × 12 / seconds; accuracy counts every keystroke; backspace never erases errors', () => {
     const tp = new Typing(() => 0.1);
     expect(tp.accuracy()).toBe(100); expect(tp.wpm(0)).toBe(0);
-    tp.net = 300; expect(tp.wpm(60)).toBe(60);
-    tp.reset(); const w = tp.word;
+    tp.net = 200; expect(tp.wpm(60)).toBe(40);
+    tp.reset(); const w = tp.text;
     tp.press(w[0]); tp.press(w[1]); tp.press(w[2] === 'Q' ? 'Z' : 'Q');
     expect([tp.wrong, tp.pos]).toEqual([1, 2]);
     tp.backspace(); tp.backspace(); expect(tp.backspace()).toBe(false);
     expect([tp.pos, tp.wrong, tp.net, tp.correct]).toEqual([0, 1, 0, 2]);
-    let r = ''; for (const ch of tp.word) r = tp.press(ch);
-    expect(r).toBe('word'); expect(tp.words).toBe(1); expect(tp.recent.at(-1)).not.toBe(tp.recent.at(-2)); expect(tp.backspace()).toBe(false);
+    const first = tp.text, res = [...first].map((ch) => tp.press(ch));
+    expect(res.filter((r) => r === 'word').length).toBe(first.split(' ').length - 1); expect(res.at(-1)).toBe('sentence');
+    expect([tp.sentences, tp.pos]).toEqual([1, 0]); expect(tp.backspace()).toBe(false);
+    const t2 = new Typing(); const seen = [t2.text, ...Array.from({ length: SENTENCES.length - 1 }, () => t2.pick())];
+    expect(new Set(seen).size).toBe(SENTENCES.length);                       // no repeats until every sentence is used
+    expect(SENTENCES.every((x) => wrap(x).length <= 2 && [...x].every((ch) => TYPABLE.has(ch)))).toBe(true);
+    expect(wrap(SENTENCES[0]).map(([, l]) => l).join('')).toBe(SENTENCES[0]);
   });
 });
 
@@ -66,13 +71,15 @@ describe('states and inputs', () => {
     g.keyEnter(); expect(g.state).toBe('READY'); g.keyChar('A'); for (let i = 0; i < 30; i++) g.step(1 / 60);
     expect([g.typing.attempts, g.elapsed]).toEqual([0, 0]);
     g.keyEnter(); expect(g.state).toBe('PLAYING');
-    const before = { ...g.dancer.target }; g.keyChar(g.typing.word[0]); expect(g.dancer.target).not.toEqual(before);
-    const poses = new Set<string>(); for (let i = 0; i < 8; i++) { g.keyChar(g.typing.word[g.typing.pos]); poses.add(JSON.stringify(g.dancer.target)); }
+    const before = { ...g.dancer.target }; g.keyChar(g.typing.text[0]); expect(g.dancer.target).not.toEqual(before);
+    const poses = new Set<string>(); for (let i = 0; i < 8; i++) { g.keyChar(g.typing.text[g.typing.pos]); poses.add(JSON.stringify(g.dancer.target)); }
     expect(poses.size).toBeGreaterThanOrEqual(6);
     g.step(1 / 60); expect(Object.keys(g.dancer.cur).some((k) => Math.abs(g.dancer.cur[k as 'lean'] - g.dancer.target[k as 'lean']) > 1e-3)).toBe(true);
-    const words = g.typing.words; while (g.typing.words === words) g.keyChar(g.typing.word[g.typing.pos]);
-    expect(g.dancer.spinV > 0 || g.dancer.target.dy <= -10).toBe(true);
-    g.keyChar(g.typing.word[g.typing.pos] === 'Q' ? 'Z' : 'Q'); expect(g.dancer.target).toEqual(POSES.stumble);
+    while (g.typing.text[g.typing.pos] !== ' ') g.keyChar(g.typing.text[g.typing.pos]);
+    g.keyChar(' '); expect(g.dancer.spinV > 0 || g.dancer.target.dy <= -10).toBe(true);
+    const sent = g.typing.sentences; while (g.typing.sentences === sent) g.keyChar(g.typing.text[g.typing.pos]);
+    expect(g.dancer.target.dy).toBeLessThanOrEqual(-10); expect(g.wordPop).not.toBeNull();
+    g.keyChar(g.typing.text[g.typing.pos] === 'Q' ? 'Z' : 'Q'); expect(g.dancer.target).toEqual(POSES.stumble);
     g.keyEscape(); const t0 = g.elapsed; for (let i = 0; i < 120; i++) g.step(1 / 60);
     expect(g.state).toBe('PAUSED'); expect(g.elapsed).toBe(t0);
     g.keyR(); expect(g.state).toBe('PAUSED');
@@ -81,8 +88,8 @@ describe('states and inputs', () => {
 });
 
 describe('results', () => {
-  it('72 WPM perfect: victory, frozen result, full ending, R restarts', () => {
-    const g = bot(6);
+  it('48 WPM perfect: victory, frozen result, full ending, R restarts', () => {
+    const g = bot(4);
     expect(g.elapsed).toBe(CHALLENGE); expect(g.state).toBe('VICTORY_DANCE'); expect(g.finalWpm).toBeCloseTo((g.typing.net * 12) / 60, 9);
     const frozen = [g.finalWpm, g.finalAcc, g.typing.correct];
     g.keyChar('A'); g.keyEscape(); g.keyR(); g.keyEnter();
@@ -93,13 +100,13 @@ describe('results', () => {
     expect(g.spkOpen).toBeGreaterThan(0.99); expect(g.dancer.x).toBeGreaterThan(370); expect(g.dancer.scaleK).toBeLessThan(0.05);
     g.keyR(); expect(g.state).toBe('READY'); expect([g.typing.attempts, g.spkOpen, g.dancer.x, g.won, g.fx.p.length]).toEqual([0, 0, DANCER_X, null, 0]);
   });
-  it('too slow loses and collapses; fast-but-sloppy loses; ≥60 WPM and ≥95% wins; nothing typed never wins', () => {
-    const slow = bot(4); expect(slow.state).toBe('GAME_OVER'); expect(slow.finalAcc).toBe(100); expect(slow.finalWpm).toBeLessThan(60);
+  it('too slow loses and collapses; fast-but-sloppy loses; ≥40 WPM and ≥88% wins; nothing typed never wins', () => {
+    const slow = bot(3); expect(slow.state).toBe('GAME_OVER'); expect(slow.finalAcc).toBe(100); expect(slow.finalWpm).toBeLessThan(40);
     for (let i = 0; i < 90; i++) slow.step(1 / 60);
     expect(slow.dancer.cur.lean).toBeCloseTo(POSES.collapse.lean, 1);
     slow.keyR(); expect([slow.state, slow.typing.attempts, slow.elapsed, slow.dancer.mode]).toEqual(['READY', 0, 0, 'groove']);
-    const sloppy = bot(7, 10); expect(sloppy.state).toBe('GAME_OVER'); expect(sloppy.finalWpm).toBeGreaterThanOrEqual(60); expect(sloppy.finalAcc).toBeLessThan(95);
-    expect(bot(7, 30).state).toBe('VICTORY_DANCE');
+    const sloppy = bot(6, 6); expect(sloppy.state).toBe('GAME_OVER'); expect(sloppy.finalWpm).toBeGreaterThanOrEqual(40); expect(sloppy.finalAcc).toBeLessThan(88);
+    expect(bot(5, 12).state).toBe('VICTORY_DANCE');
     const idle = new OrangeGame(); idle.keyEnter(); idle.keyEnter(); for (let i = 0; i < 3700; i++) idle.step(1 / 60);
     expect(idle.state).toBe('GAME_OVER'); expect(idle.won).toBe(false);
   });

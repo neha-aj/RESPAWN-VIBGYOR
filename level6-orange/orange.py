@@ -1,12 +1,12 @@
 """
 VIBGYOR · ORANGE
-A typing-dance rhythm game in chibi pixel art. Every correct keystroke is a dance move
-for Thanos. Hold at least 60 WPM with at least 95% accuracy for 60 seconds and the
+A typing-dance rhythm game in chibi pixel art. Type whole sentences; every correct keystroke is a
+dance move for Thanos. Hold at least 40 WPM with at least 88% accuracy for 60 seconds and the
 speakers slide apart to reveal the Phase Door to RED.
 
 Standalone: Python 3 + pygame only (python -m pip install pygame). Every pixel, glyph,
 sound effect and the music are generated in code. Orange shades only.
-Keys: letters type · BACKSPACE fix the current word · ENTER start · ESC pause/resume
+Keys: type the sentence (letters, spaces, punctuation) · BACKSPACE fix the current sentence · ENTER start · ESC pause/resume
       R restart (after a result) · M mute (outside the challenge) · close the window to quit
 """
 import array, math, random, sys, threading
@@ -15,7 +15,7 @@ import pygame as pg
 W, H, FPS, SCALE = 900, 650, 60, 2
 LW, LH = W // SCALE, H // SCALE                     # 450 × 325 pixel-art canvas, scaled ×2 with hard pixels
 CHALLENGE = 60.0
-TARGET_WPM, TARGET_ACC = 60, 95.0
+TARGET_WPM, TARGET_ACC = 40, 88.0
 BPM = 120.0
 BEAT = 60.0 / BPM
 VICTORY_DANCE_T, DOOR_T, ENTRY_T = 2.6, 2.6, 3.2
@@ -27,10 +27,30 @@ STAGE, SPOT, DANCER, HUD_C, DOOR = (58, 19, 0), (255, 102, 0), (255, 153, 0), (2
 INK, DEEP, DARK, BURNT, TERRA, MID = (20, 6, 0), (40, 12, 0), (90, 32, 0), (140, 52, 0), (180, 70, 10), (230, 110, 20)
 AMBER, LAMBER, PEACH, SKIN_SH, HI, GLOWC = (255, 176, 64), (255, 204, 128), (255, 190, 120), (214, 112, 0), (255, 196, 110), (255, 140, 30)
 
-WORDS = ["GROOVE", "BOOGIE", "BOUNCE", "RHYTHM", "ENERGY", "VIBRANT", "STEP", "SHUFFLE", "DANCE", "PULSE", "JUMP", "SPARK",
-         "BEAT", "MOVE", "PARTY", "ORANGE", "FLOW", "TWIRL", "FUNKY", "GLOW", "POWER", "TEMPO", "SWING", "HAPPY", "DYNAMIC",
-         "ELECTRIC", "FESTIVAL", "CELEBRATE", "MOTION", "FREESTYLE", "SNAP", "TITAN", "GAUNTLET", "INFINITY", "COSMIC",
-         "DESTINY", "STONES", "BALANCE", "HERO", "MARVEL"]
+SENTENCES = [                                       # original lines; dealt from a shuffled deck so none repeats
+    "THANOS DANCES ON THE STAGE TONIGHT.", "THE GAUNTLET GLOWS WITH EVERY BEAT.", "SIX STONES SPARKLE UNDER THE LIGHTS.",
+    "THE CROWD WAVES THEIR GLOWSTICKS HIGH.", "A TITAN NEVER MISSES A SINGLE STEP.", "SPIN AROUND AND SNAP YOUR FINGERS.",
+    "THE SPEAKERS SHAKE THE WHOLE CLUB.", "BALANCE THE RHYTHM, BALANCE THE WORLD.", "THE AVENGERS WATCH IN SILENCE.",
+    "EVERY KEY YOU PRESS IS A NEW MOVE.", "THE DISCO FLOOR LIGHTS UP IN ORANGE.", "KEEP YOUR FINGERS LIGHT AND QUICK.",
+    "THE BASS LINE BOUNCES OFF THE WALLS.", "IRON MAN CANNOT BELIEVE HIS EYES.", "THOR DROPS HIS HAMMER IN SURPRISE.",
+    "THE HULK TRIES TO DANCE BUT FALLS.", "SPIDER MAN FEELS A STRANGE TINGLE.", "CAPTAIN AMERICA SALUTES THE GROOVE.",
+    "BLACK WIDOW TAPS HER FOOT TO THE BEAT.", "DOCTOR STRANGE SEES ONE WINNING DANCE.", "GROOT SWAYS SLOWLY IN THE BACK ROW.",
+    "LOKI CLAIMS HE TAUGHT THANOS TO DANCE.", "THE PHASE DOOR WAITS BEHIND THE SPEAKERS.", "TYPE FAST AND THE TITAN WILL GROOVE.",
+    "A PERFECT SPIN EARNS A LOUD CHEER.", "THE SPOTLIGHTS SWEEP ACROSS THE CROWD.", "ONE MORE SONG BEFORE THE FINAL SNAP.",
+    "THE MUSIC NEVER STOPS ON TITAN.", "STARS FLICKER ABOVE THE DANCE FLOOR.", "THANOS WEARS SUNGLASSES INDOORS.",
+    "THE PURPLE GIANT LOVES A GOOD BEAT.", "HEROES AND VILLAINS SHARE ONE STAGE.", "FOLLOW THE RHYTHM WITH YOUR HANDS.",
+    "THE INFINITY STONES HUM IN TUNE.", "A COSMIC PARTY NEEDS A COSMIC DJ.", "STEP LEFT, STEP RIGHT, NOW JUMP HIGH.",
+    "THE GAUNTLET CLICKS ON EVERY SNAP.", "NEVER STOP MOVING YOUR FEET.", "THE ORANGE GLOW FILLS THE ROOM.",
+    "SMOOTH MOVES BEAT SPEED EVERY TIME.", "THE CROWD CHANTS THE NAME OF THE TITAN.", "HAWKEYE AIMS AN ARROW AT THE DISCO BALL.",
+    "ANT MAN DANCES ON THE SPEAKER CONE.", "THE GUARDIANS BROUGHT THEIR OWN MIXTAPE.", "STAR LORD WANTS A DANCE BATTLE.",
+    "ROCKET COUNTS EVERY MISSED STEP.", "VISION FLOATS ABOVE THE DANCE FLOOR.", "THE BEAT DROPS AND THE ROOM JUMPS.",
+    "A SINGLE SNAP CAN END THE SONG.", "KEEP CALM AND KEEP TYPING.", "THE TITAN BOWS TO A ROARING CROWD.",
+    "SHUFFLE YOUR FEET AND SWING YOUR ARMS.", "THE NIGHT IS YOUNG AND THE MUSIC IS LOUD.", "FIND THE RHYTHM AND HOLD IT TIGHT.",
+    "NO HERO CAN STOP THIS GROOVE.", "THE DRUMS ROLL LIKE DISTANT THUNDER.", "WAKANDA SENDS ITS BEST DRUMMERS.",
+    "THE BALCONY SHAKES WITH EVERY BASS HIT.", "FALCON GLIDES OVER THE CHEERING FANS.", "THE LAST SONG BELONGS TO THANOS.",
+]
+TYPABLE = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ .,")
+LINE_CHARS = 40                                     # sentence panel wraps at 40 characters per line
 
 # ---- 5×7 pixel font (hex rows) ----
 FONT_SRC = ("A0e11111f111111|B1e11111e11111e|C0e11101010110e|D1e11111111111e|E1f10101e10101f|F1f10101e101010|G0e11101711110f|"
@@ -75,37 +95,55 @@ class PixelFont:
 
 # =============================================================== typing & scoring
 class Typing:
-    """One active word at a time. Accuracy counts every keystroke ever made; WPM counts kept correct letters / 5."""
-    def __init__(s, rng): s.rng = rng; s.reset()
+    """One sentence at a time, typed character by character (spaces count, as in standard WPM).
+    Accuracy counts every keystroke ever made; WPM counts kept correct characters / 5.
+    Sentences come from a shuffled deck that survives restarts, so none repeats until all have been used."""
+    def __init__(s, rng): s.rng, s.deck, s.last = rng, [], None; s.reset()
     def reset(s):
-        s.correct = s.wrong = s.net = s.words = 0
+        s.correct = s.wrong = s.net = s.words = s.sentences = 0
         s.streak = s.best = 0
-        s.recent = []
-        s.word = s.pick()
+        s.done = ""
+        s.text = s.pick()
         s.pos = 0
     def pick(s):
-        opts = [w for w in WORDS if w not in s.recent[-6:]]
-        w = s.rng.choice(opts)
-        s.recent.append(w)
-        return w
+        if not s.deck:
+            s.deck = SENTENCES[:]; s.rng.shuffle(s.deck)
+            if s.deck[-1] == s.last: s.deck.insert(0, s.deck.pop())     # never the same line twice in a row
+        s.last = s.deck.pop()
+        return s.last
     @property
     def attempts(s): return s.correct + s.wrong
     def accuracy(s): return 100.0 if s.attempts == 0 else s.correct / s.attempts * 100.0
     def wpm(s, elapsed): return 0.0 if elapsed <= 0 else s.net * 12.0 / elapsed
     def press(s, ch):
-        """Returns 'correct', 'word' (the letter completed the word) or 'wrong'."""
-        if ch == s.word[s.pos]:
+        """Returns 'correct', 'word' (finished a word), 'sentence' (finished the sentence) or 'wrong'."""
+        if ch == s.text[s.pos]:
             s.correct += 1; s.net += 1; s.pos += 1; s.streak += 1; s.best = max(s.best, s.streak)
-            if s.pos == len(s.word):
-                s.words += 1; s.word = s.pick(); s.pos = 0
-                return "word"
+            if s.pos == len(s.text):
+                s.words += 1; s.sentences += 1; s.done = s.text; s.text = s.pick(); s.pos = 0
+                return "sentence"
+            if ch == " ": s.words += 1; return "word"
             return "correct"
         s.wrong += 1; s.streak = 0
         return "wrong"
     def backspace(s):
-        if s.pos == 0: return False                              # completed words can never be erased
+        if s.pos == 0: return False                              # finished sentences can never be erased
         s.pos -= 1; s.net -= 1
+        if s.text[s.pos] == " ": s.words -= 1
         return True
+
+
+def wrap(text, width=LINE_CHARS):
+    """Greedy word wrap; returns (start index, line) pairs. Each line keeps its trailing space."""
+    lines, start, cur = [], 0, ""
+    for word in text.split(" "):
+        piece = word + " "
+        if cur and len(cur) + len(word) > width:
+            lines.append((start, cur)); start += len(cur); cur = ""
+        cur += piece
+    cur = cur[:-1]
+    lines.append((start, cur))
+    return lines
 
 
 # =============================================================== sound
@@ -680,7 +718,7 @@ class Game:
     def key_char(s, ch):
         if s.state != "PLAYING": return
         ch = ch.upper()
-        if not ("A" <= ch <= "Z") or len(ch) != 1: return
+        if len(ch) != 1 or ch not in TYPABLE: return
         tp, d = s.typing, s.dancer
         res = tp.press(ch)
         if res == "wrong":
@@ -692,10 +730,13 @@ class Game:
             r, c = random.randrange(5), random.randrange(8); s.stage.tiles[r][c] = 1.0
         s.fx.burst((d.x, GROUND - 40), 3, 50, (AMBER, HI, SPOT), (0.2, 0.5), 60, "spark")
         if res == "word":
-            d.word_accent(tp.words); s.audio.play("word", 0.6); s.stage.pulse = 1.0
-            s.word_pop = [s.typing.recent[-2] if len(s.typing.recent) > 1 else "", 0.0]
-            s.fx.burst((d.x, GROUND - 50), 14, 120, (DOOR, LAMBER, AMBER), (0.4, 0.9), 80, "spark")
-            if tp.words % 5 == 0: s.audio.play("cheer", 0.35)
+            d.word_accent(tp.words); s.audio.play("word", 0.4); s.stage.pulse = 1.0
+            s.fx.burst((d.x, GROUND - 50), 8, 100, (DOOR, LAMBER, AMBER), (0.3, 0.8), 80, "spark")
+        elif res == "sentence":                                        # the biggest accent: jump + cheer
+            d.target, d.kick, d.hold = dict(POSES["jump"]), 2.4, 0.6; d.spin_v = math.tau / 0.5; d.say("grin", 0.8)
+            s.audio.play("word", 0.7); s.audio.play("cheer", 0.45); s.stage.pulse = 1.0
+            s.word_pop = [tp.done, 0.0]
+            s.fx.burst((d.x, GROUND - 50), 24, 140, (DOOR, LAMBER, AMBER), (0.4, 1.0), 80, "spark")
         d.shades = tp.streak >= 12 or s.live_wpm() >= TARGET_WPM
 
     def live_wpm(s): return s.typing.wpm(max(1.0, s.elapsed))
@@ -708,7 +749,7 @@ class Game:
         for tile_row in s.stage.tiles:
             for i in range(8): tile_row[i] *= math.exp(-dt * 3)
         s.toasts = [[a, b - dt, c] for a, b, c in s.toasts if b - dt > 0]
-        if s.word_pop: s.word_pop[1] += dt; s.word_pop = s.word_pop if s.word_pop[1] < 0.4 else None
+        if s.word_pop: s.word_pop[1] += dt; s.word_pop = s.word_pop if s.word_pop[1] < 0.6 else None
         st = s.state
         alive = st not in ("GAME_OVER",)
         s.dancer.update(dt, s.t, alive)
@@ -722,7 +763,7 @@ class Game:
             s.energy *= math.exp(-dt * 0.3)
             wpm, acc = s.live_wpm(), s.typing.accuracy()
             if not s.pace_hit and s.elapsed > 3 and wpm >= TARGET_WPM and acc >= TARGET_ACC:
-                s.pace_hit = True; s.audio.play("pace", 0.5); s.toast("60 WPM PACE!")
+                s.pace_hit = True; s.audio.play("pace", 0.5); s.toast("40 WPM PACE!")
             s.dancer.base_expr = "smug" if s.typing.streak >= 5 else "focus"
             if s.elapsed >= CHALLENGE: s.finish()
         elif st == "VICTORY_DANCE":
@@ -830,8 +871,8 @@ class Game:
             s.panel(pg.Rect(110, 90, 680, 470), 225)
             F.draw(D, "RULES", 7, SPOT, (W // 2, 140))
             F.draw(D, "PLACEHOLDER - FINAL RULES TO BE ATTACHED", 2, AMBER, (W // 2, 180))
-            lines = ["TYPE THE WORD ON SCREEN, LETTER BY LETTER.", "EVERY CORRECT KEY IS A DANCE MOVE FOR THANOS.", "WRONG KEYS ARE ERRORS - BACKSPACE CANNOT ERASE THEM.",
-                     "BACKSPACE ONLY FIXES THE CURRENT WORD.", "HOLD 60 WPM WITH 95% ACCURACY FOR 60 SECONDS.", "WPM = CORRECT LETTERS / 5 PER MINUTE.",
+            lines = ["TYPE THE SENTENCE ON SCREEN, SPACES AND ALL.", "EVERY CORRECT KEY IS A DANCE MOVE FOR THANOS.", "WRONG KEYS ARE ERRORS - BACKSPACE CANNOT ERASE THEM.",
+                     "BACKSPACE ONLY FIXES THE CURRENT SENTENCE.", "HOLD 40 WPM WITH 88% ACCURACY FOR 60 SECONDS.", "WPM = CORRECT CHARACTERS / 5 PER MINUTE.",
                      "ESC PAUSES. WIN AND THE PHASE DOOR OPENS."]
             for i, l in enumerate(lines): F.draw(D, l, 2, HUD_C, (W // 2, 228 + i * 34))
             s.button("back", "BACK", (W // 2, 505))
@@ -852,41 +893,43 @@ class Game:
             pg.draw.rect(D, AMBER if ok else MID, (bar.x, bar.y, int(bar.w * min(1.0, val / cap)), bar.h))
             tx = bar.x + int(bar.w * target / cap); pg.draw.rect(D, DOOR, (tx - 1, bar.y - 4, 2, bar.h + 8))
             F.draw(D, ("OK" if ok else "LOW") if st == "PLAYING" else f"{target:g}", 2, DOOR if ok else SPOT, (bar.right + 8, 44), "midleft", None)
-        meter(140, "WPM / 60", wpm, TARGET_WPM, 90, "{:3.0f}")
-        meter(420, "ACCURACY / 95%", acc, TARGET_ACC, 100, "{:3.0f}%")
+        meter(140, "WPM / 40", wpm, TARGET_WPM, 90, "{:3.0f}")
+        meter(420, "ACCURACY / 88%", acc, TARGET_ACC, 100, "{:3.0f}%")
         F.draw(D, f"CORRECT {tp.correct}", 2, HUD_C, (W - 22, 20), "topright", None)
         F.draw(D, f"ERRORS  {tp.wrong}", 2, SPOT if s.err_t > 0 else HUD_C, (W - 22, 36), "topright", None)
         F.draw(D, f"WORDS   {tp.words}", 2, HUD_C, (W - 22, 52), "topright", None)
-        # the active word
+        # the active sentence (wrapped onto up to two lines)
         if st in ("READY", "PLAYING", "PAUSED"):
-            box = pg.Rect(200, 470, 500, 76); s.panel(box, 205, SPOT if s.err_t <= 0 else AMBER)
-            word = tp.word; px = 6 if len(word) <= 9 else 5
-            total = PixelFont.width(word, px); x0 = W // 2 - total // 2; y0 = box.centery - 7 * px // 2 - 4
-            for i, ch in enumerate(word):
-                typed = i < tp.pos
-                col = SPOT if typed else HUD_C
-                dx = (random.uniform(-3, 3) if (s.err_t > 0 and i == tp.pos) else 0)
-                img = F.render(ch, px, col)
-                D.blit(F.render(ch, px, INK), (x0 + i * 6 * px + px + dx, y0 + px))
-                D.blit(img, (x0 + i * 6 * px + dx, y0))
-                if typed: pg.draw.rect(D, AMBER, (x0 + i * 6 * px, y0 + 7 * px + 6, 5 * px, 3))
-            if st == "PLAYING" and int(s.t * 3) % 2 == 0 and tp.pos < len(word):
-                pg.draw.rect(D, DOOR, (x0 + tp.pos * 6 * px, y0 + 7 * px + 6, 5 * px, 3))
+            box = pg.Rect(70, 474, 760, 88); s.panel(box, 210, SPOT if s.err_t <= 0 else AMBER)
+            text, px = tp.text, 3
+            lines = wrap(text)
+            for li, (start, line) in enumerate(lines):
+                x0 = W // 2 - PixelFont.width(line.rstrip(), px) // 2
+                y0 = box.y + 14 + li * 32 + (16 if len(lines) == 1 else 0)
+                for j, ch in enumerate(line):
+                    i = start + j
+                    typed = i < tp.pos
+                    dx = random.uniform(-3, 3) if (s.err_t > 0 and i == tp.pos) else 0
+                    X = x0 + j * 6 * px + dx
+                    if ch != " ":
+                        D.blit(F.render(ch, px, INK), (X + px, y0 + px)); D.blit(F.render(ch, px, SPOT if typed else HUD_C), (X, y0))
+                    if typed: pg.draw.rect(D, AMBER, (X, y0 + 7 * px + 3, 5 * px, 2))
+                    if i == tp.pos and st == "PLAYING" and int(s.t * 3) % 2 == 0: pg.draw.rect(D, DOOR, (X, y0 + 7 * px + 3, 5 * px, 3))
             pg.draw.rect(D, DARK, (box.x + 10, box.bottom - 8, box.w - 20, 3))
-            pg.draw.rect(D, AMBER, (box.x + 10, box.bottom - 8, int((box.w - 20) * tp.pos / len(word)), 3))
+            pg.draw.rect(D, AMBER, (box.x + 10, box.bottom - 8, int((box.w - 20) * tp.pos / len(text)), 3))
             if s.word_pop and s.word_pop[0]:
-                k = s.word_pop[1] / 0.4
-                img = F.render(s.word_pop[0], 4, LAMBER); img.set_alpha(int(255 * (1 - k)))
-                D.blit(img, img.get_rect(center=(W // 2, box.y - 18 - 40 * k)))
+                k = s.word_pop[1] / 0.6
+                img = F.render(s.word_pop[0], 2, LAMBER); img.set_alpha(int(255 * (1 - k)))
+                D.blit(img, img.get_rect(center=(W // 2, box.y - 14 - 40 * k)))
         for i, (text, left_t, total_t) in enumerate(s.toasts[-2:]):
             F.draw(D, text, 4, DOOR, (W // 2, 440 - i * 34))
         if st == "PLAYING" and s.elapsed > 6:
             fb = "ON PACE" if s.live_wpm() >= TARGET_WPM else "BELOW PACE - FASTER!"
-            F.draw(D, fb, 2, DOOR if s.live_wpm() >= TARGET_WPM else SPOT, (W // 2, 560), shadow=INK)
+            F.draw(D, fb, 2, DOOR if s.live_wpm() >= TARGET_WPM else SPOT, (W // 2, 578), shadow=INK)
         if st == "READY":
             r = pg.Rect(140, 110, 620, 330); s.panel(r, 225)
             F.draw(D, "READY?", 8, SPOT, (W // 2, 160))
-            for i, l in enumerate(("TYPE EACH WORD TO MAKE THANOS DANCE.", "REACH AT LEAST 60 WPM", "WITH AT LEAST 95% ACCURACY", "OVER THE FULL 60 SECONDS.")):
+            for i, l in enumerate(("TYPE EACH SENTENCE TO MAKE THANOS DANCE.", "REACH AT LEAST 40 WPM", "WITH AT LEAST 88% ACCURACY", "OVER THE FULL 60 SECONDS.")):
                 F.draw(D, l, 3 if i in (1, 2) else 2, DOOR if i in (1, 2) else HUD_C, (W // 2, 222 + i * 38))
             F.draw(D, "PRESS ENTER TO START", 4, SPOT if int(s.t * 2) % 2 else AMBER, (W // 2, 400))
         elif st == "PAUSED":
@@ -902,8 +945,8 @@ class Game:
             missed = []
             if s.typing.attempts == 0: missed.append("NO LETTERS TYPED")
             else:
-                if s.final_wpm < TARGET_WPM: missed.append(f"SPEED MISSED: {s.final_wpm:.1f} / 60 WPM")
-                if s.final_acc < TARGET_ACC: missed.append(f"ACCURACY MISSED: {s.final_acc:.1f} / 95%")
+                if s.final_wpm < TARGET_WPM: missed.append(f"SPEED MISSED: {s.final_wpm:.1f} / 40 WPM")
+                if s.final_acc < TARGET_ACC: missed.append(f"ACCURACY MISSED: {s.final_acc:.1f} / 88%")
             for i, m in enumerate(missed): F.draw(D, m, 2, AMBER, (W // 2, 322 + i * 26))
             F.draw(D, "PRESS R TO RETRY", 4, DOOR if int(s.t * 2) % 2 else SPOT, (W // 2, 420))
         elif st in ("VICTORY_DANCE", "DOOR_OPENING", "PORTAL_ENTRY"):

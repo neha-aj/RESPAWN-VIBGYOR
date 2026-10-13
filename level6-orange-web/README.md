@@ -23,8 +23,8 @@ Open http://localhost:5177 in a desktop browser.
 
 | Key | Action |
 |---|---|
-| Letters | Type |
-| BACKSPACE | Fix the current word |
+| Letters, space, `.` `,` | Type the sentence |
+| BACKSPACE | Fix the current sentence |
 | ENTER | Start |
 | ESC | Pause / resume |
 | R | Restart after a result |
@@ -46,7 +46,7 @@ All screens are drawn on the canvas with the 5×7 pixel font. Tailwind tokens ar
 
 | File | Contents |
 |---|---|
-| `config.ts` | Palette, words, pixel font and dance poses |
+| `config.ts` | Palette, the 60 sentences and word wrap, pixel font and dance poses |
 | `sim.ts` | Typing and scoring, the procedural dancer, particles and the state machine |
 | `render.ts` | Pixel-art stage, Avengers, crowd, dancer, Phase Door and HUD |
 | `audio.ts` | Synthesized sound effects and the original disco loop |

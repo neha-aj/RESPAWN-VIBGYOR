@@ -1,5 +1,5 @@
 /* ORANGE renderer — chibi pixel art on a 450 × 325 canvas, scaled ×2 with hard pixels, plus a crisp 5×7 pixel-font UI. */
-import { BEAT, C, CHALLENGE, FONT, GROUND, H, HEROES, LH, LW, RULES_PLACEHOLDER, TARGET_ACC, TARGET_WPM, W, rgb, type RGB } from './config';
+import { BEAT, C, CHALLENGE, FONT, GROUND, H, HEROES, LH, LW, RULES_PLACEHOLDER, TARGET_ACC, TARGET_WPM, W, rgb, wrap, type RGB } from './config';
 import type { Expr, OrangeGame } from './sim';
 
 type Ctx = CanvasRenderingContext2D;
@@ -344,30 +344,32 @@ export class Renderer {
       c.fillStyle = rgb(C.DOOR); c.fillRect(bx + Math.round((bw * target) / cap) - 1, by - 4, 2, bh + 8);
       this.text(st === 'PLAYING' ? (ok ? 'OK' : 'LOW') : String(target), 2, ok ? C.DOOR : C.SPOT, bx + bw + 8, 44, 'left', null);
     };
-    meter(140, 'WPM / 60', wpm, TARGET_WPM, 90, String(Math.round(wpm)).padStart(3, ' '));
-    meter(420, 'ACCURACY / 95%', acc, TARGET_ACC, 100, `${String(Math.round(acc)).padStart(3, ' ')}%`);
+    meter(140, 'WPM / 40', wpm, TARGET_WPM, 90, String(Math.round(wpm)).padStart(3, ' '));
+    meter(420, 'ACCURACY / 88%', acc, TARGET_ACC, 100, `${String(Math.round(acc)).padStart(3, ' ')}%`);
     this.text(`CORRECT ${tp.correct}`, 2, C.HUD, W - 22, 20, 'right', null);
     this.text(`ERRORS  ${tp.wrong}`, 2, game.errT > 0 ? C.SPOT : C.HUD, W - 22, 36, 'right', null);
     this.text(`WORDS   ${tp.words}`, 2, C.HUD, W - 22, 52, 'right', null);
-    if (st === 'READY' || st === 'PLAYING' || st === 'PAUSED') {
-      this.panel(200, 470, 500, 76, 0.8, game.errT > 0 ? C.AMBER : C.SPOT);
-      const word = tp.word, px = word.length <= 9 ? 6 : 5, total = (word.length * 6 - 1) * px, x0 = Math.round(W / 2 - total / 2), y0 = Math.round(508 - (7 * px) / 2 - 4), c = this.ctx;
-      [...word].forEach((ch, i) => {
-        const typed = i < tp.pos, dx = game.errT > 0 && i === tp.pos ? Math.round(Math.random() * 6 - 3) : 0;
-        c.drawImage(this.textImg(ch, px, C.INK), x0 + i * 6 * px + px + dx, y0 + px);
-        c.drawImage(this.textImg(ch, px, typed ? C.SPOT : C.HUD), x0 + i * 6 * px + dx, y0);
-        if (typed) { c.fillStyle = rgb(C.AMBER); c.fillRect(x0 + i * 6 * px, y0 + 7 * px + 6, 5 * px, 3); }
+    if (st === 'READY' || st === 'PLAYING' || st === 'PAUSED') {           // the active sentence, wrapped onto up to two lines
+      this.panel(70, 474, 760, 88, 0.82, game.errT > 0 ? C.AMBER : C.SPOT);
+      const text = tp.text, px = 3, lines = wrap(text), c = this.ctx;
+      lines.forEach(([start, line], li) => {
+        const x0 = Math.round(W / 2 - ((line.trimEnd().length * 6 - 1) * px) / 2), y0 = 474 + 14 + li * 32 + (lines.length === 1 ? 16 : 0);
+        [...line].forEach((ch, j) => {
+          const i = start + j, typed = i < tp.pos, X = x0 + j * 6 * px + (game.errT > 0 && i === tp.pos ? Math.round(Math.random() * 6 - 3) : 0);
+          if (ch !== ' ') { c.drawImage(this.textImg(ch, px, C.INK), X + px, y0 + px); c.drawImage(this.textImg(ch, px, typed ? C.SPOT : C.HUD), X, y0); }
+          if (typed) { c.fillStyle = rgb(C.AMBER); c.fillRect(X, y0 + 7 * px + 3, 5 * px, 2); }
+          if (i === tp.pos && st === 'PLAYING' && Math.floor(t * 3) % 2 === 0) { c.fillStyle = rgb(C.DOOR); c.fillRect(X, y0 + 7 * px + 3, 5 * px, 3); }
+        });
       });
-      if (st === 'PLAYING' && Math.floor(t * 3) % 2 === 0 && tp.pos < word.length) { c.fillStyle = rgb(C.DOOR); c.fillRect(x0 + tp.pos * 6 * px, y0 + 7 * px + 6, 5 * px, 3); }
-      c.fillStyle = rgb(C.DARK); c.fillRect(210, 538, 480, 3); c.fillStyle = rgb(C.AMBER); c.fillRect(210, 538, Math.round((480 * tp.pos) / word.length), 3);
-      if (game.wordPop?.word) { const k = game.wordPop.t / 0.4; c.globalAlpha = 1 - k; this.text(game.wordPop.word, 4, C.LAMBER, W / 2, 452 - 40 * k, 'center', null); c.globalAlpha = 1; }
+      c.fillStyle = rgb(C.DARK); c.fillRect(80, 554, 740, 3); c.fillStyle = rgb(C.AMBER); c.fillRect(80, 554, Math.round((740 * tp.pos) / text.length), 3);
+      if (game.wordPop?.word) { const k = game.wordPop.t / 0.6; c.globalAlpha = 1 - k; this.text(game.wordPop.word, 2, C.LAMBER, W / 2, 460 - 40 * k, 'center', null); c.globalAlpha = 1; }
     }
     game.toasts.slice(-2).forEach((x, i) => this.text(x.text, 4, C.DOOR, W / 2, 440 - i * 34));
-    if (st === 'PLAYING' && game.elapsed > 6) { const ok = game.liveWpm() >= TARGET_WPM; this.text(ok ? 'ON PACE' : 'BELOW PACE - FASTER!', 2, ok ? C.DOOR : C.SPOT, W / 2, 560); }
+    if (st === 'PLAYING' && game.elapsed > 6) { const ok = game.liveWpm() >= TARGET_WPM; this.text(ok ? 'ON PACE' : 'BELOW PACE - FASTER!', 2, ok ? C.DOOR : C.SPOT, W / 2, 578); }
     if (st === 'READY') {
       this.panel(140, 110, 620, 330, 0.88);
       this.text('READY?', 8, C.SPOT, W / 2, 160);
-      ['TYPE EACH WORD TO MAKE THANOS DANCE.', 'REACH AT LEAST 60 WPM', 'WITH AT LEAST 95% ACCURACY', 'OVER THE FULL 60 SECONDS.'].forEach((l, i) => this.text(l, i === 1 || i === 2 ? 3 : 2, i === 1 || i === 2 ? C.DOOR : C.HUD, W / 2, 222 + i * 38));
+      ['TYPE EACH SENTENCE TO MAKE THANOS DANCE.', 'REACH AT LEAST 40 WPM', 'WITH AT LEAST 88% ACCURACY', 'OVER THE FULL 60 SECONDS.'].forEach((l, i) => this.text(l, i === 1 || i === 2 ? 3 : 2, i === 1 || i === 2 ? C.DOOR : C.HUD, W / 2, 222 + i * 38));
       this.text('PRESS ENTER TO START', 4, Math.floor(t * 2) % 2 ? C.SPOT : C.AMBER, W / 2, 400);
     } else if (st === 'PAUSED') {
       this.panel(250, 140, 400, 300, 0.9);
@@ -380,7 +382,7 @@ export class Renderer {
       this.text(`ACCURACY ${game.finalAcc.toFixed(1)}%`, 3, C.HUD, W / 2, 278);
       const missed: string[] = [];
       if (tp.attempts === 0) missed.push('NO LETTERS TYPED');
-      else { if (game.finalWpm < TARGET_WPM) missed.push(`SPEED MISSED: ${game.finalWpm.toFixed(1)} / 60 WPM`); if (game.finalAcc < TARGET_ACC) missed.push(`ACCURACY MISSED: ${game.finalAcc.toFixed(1)} / 95%`); }
+      else { if (game.finalWpm < TARGET_WPM) missed.push(`SPEED MISSED: ${game.finalWpm.toFixed(1)} / 40 WPM`); if (game.finalAcc < TARGET_ACC) missed.push(`ACCURACY MISSED: ${game.finalAcc.toFixed(1)} / 88%`); }
       missed.forEach((m, i) => this.text(m, 2, C.AMBER, W / 2, 322 + i * 26));
       this.text('PRESS R TO RETRY', 4, Math.floor(t * 2) % 2 ? C.DOOR : C.SPOT, W / 2, 420);
     } else if (st === 'VICTORY_DANCE' || st === 'DOOR_OPENING' || st === 'PORTAL_ENTRY') {
