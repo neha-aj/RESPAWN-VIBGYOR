@@ -1,5 +1,5 @@
 """
-VIBGYOR · YELLOW
+YELLOW
 A 2D side-view fighting game in yellow pixel art. Thanos fights Wolverine (claws out) in a
 golden throne room. Beat it, smash the barrier, and walk through the Phase Door.
 

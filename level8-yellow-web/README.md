@@ -1,4 +1,4 @@
-# VIBGYOR · YELLOW (web)
+# YELLOW (web)
 
 The web version of YELLOW. The combat, AI, frame data, art, sound and music match `../level8-yellow/yellow.py`.
 

@@ -1,4 +1,4 @@
-# VIBGYOR · YELLOW (Python)
+# YELLOW (Python)
 
 A 2D side-view fighting game in yellow pixel art. **Thanos** fights **Wolverine** in a golden throne room styled after a pixel beat-'em-up: a cosmic window, a throne, curved consoles and a perspective floor. Defeat Wolverine, watch the barrier shatter, then walk through the Phase Door.
 
