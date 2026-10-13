@@ -25,7 +25,6 @@ export default class RedTitle extends LevelBase {
     this.hero = this.add.graphics();
     this.t = 0;
     this.add.text(640, 150, 'RED', { fontFamily: FONT, fontSize: '120px', color: TEXT, fontStyle: 'bold' }).setOrigin(0.5).setShadow(0, 0, '#FF1744', 24, true, true);
-    this.add.text(640, 236, 'VIBGYOR · LEVEL 7', { fontFamily: FONT, fontSize: '18px', color: TEXT_DIM }).setOrigin(0.5);
     const items = [['START', () => this.start()], ['RULES', () => this.showRules(true)], ['EXIT', () => this.exit()]];
     this.buttons = items.map(([label, fn], i) => {
       const b = this.add.text(640, 330 + i * 64, label, { fontFamily: FONT, fontSize: '28px', color: TEXT, backgroundColor: '#1C070CDD', padding: { x: 60, y: 10 }, fixedWidth: 260, align: 'center' })
