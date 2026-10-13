@@ -1,4 +1,4 @@
-# VIBGYOR · ORANGE (web)
+# ORANGE (web)
 
 The web version of ORANGE. The gameplay, scoring, choreography, artwork, sound and music match `../level6-orange/orange.py`.
 
