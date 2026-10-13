@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRedGame } from '../game/scenes/index.js';
 
 /**
- * Level RED (VIBGYOR 7) as one self-contained component.
+ * RED as one self-contained component.
  *   onComplete — called once with 'red' when Thanos walks through the last door
  *   onExit     — called by the title's EXIT button (defaults to a "you can close this tab" screen)
  */

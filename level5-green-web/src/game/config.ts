@@ -55,7 +55,7 @@ export const MAP = [
 export const RUNE_NAMES = ['RUNE OF ROOT', 'RUNE OF THORN', 'RUNE OF VEIL'];
 
 export const LEVEL = {
-  title: 'THE SYLVAN ABYSS',
+  title: 'GREEN',
   tagline: 'THREE RUNES. ONE HAUNTED FOREST.',
   goal: 'FIND THE RUNES. RETURN TO THE TREE. ENTER THE DOOR.',
   controls: ['WASD / ARROWS — MOVE', 'SHIFT — SPRINT AND MAKE NOISE', 'MOUSE — AIM FLASHLIGHT'],
@@ -65,7 +65,7 @@ export const LEVEL = {
 export const RULES_PLACEHOLDER = {
   isPlaceholder: true,
   lines: [
-    'Thanos is lost in the Sylvan Abyss. Find the three green runes.',
+    'Thanos is lost in a haunted forest. Find the three green runes.',
     'A phantom wanders the maze. It cannot see you — it hunts by sound.',
     'Sprinting (SHIFT) makes noise rings; it hears them from about nine paces.',
     'Walking is silent, but it will sense you if you brush right past it.',

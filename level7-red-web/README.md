@@ -1,4 +1,4 @@
-# VIBGYOR · RED — Level 7 (web)
+# RED (web)
 
 A rage platformer in monochromatic red. **Thanos**, in a long coat, works through four rooms that keep breaking their own rules. A sarcastic narrator and a Fever thermometer keep score of his deaths. At the end he walks through a lit doorway.
 

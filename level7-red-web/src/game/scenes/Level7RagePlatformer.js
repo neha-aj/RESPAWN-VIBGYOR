@@ -1,4 +1,4 @@
-/* RED — Level 7: a rage platformer with original traps, a sarcastic narrator, a Fever meter, four rooms and an emotional ending.
+/* RED: a rage platformer with original traps, a sarcastic narrator, a Fever meter, four rooms and an emotional ending.
  * Thanos (in his long coat) is the player. Phaser 3 Arcade Physics, 1280 × 720, procedural red-only graphics. */
 import Phaser from 'phaser';
 import LevelBase, { FONT } from '../LevelBase.js';

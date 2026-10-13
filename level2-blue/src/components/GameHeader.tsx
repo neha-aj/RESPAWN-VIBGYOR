@@ -45,7 +45,7 @@ export function GameHeader(p: {
       <div className="flex min-w-0 items-center gap-4">
         <div className="font-pixel text-[18px] text-cyan drop-shadow-[0_0_6px_#258BFF]">{LEVEL.title.toUpperCase()}</div>
         <div className="hidden min-w-0 flex-col lg:flex">
-          <span className="font-pixel text-[9px] text-pale">LEVEL {p.level}: {LEVEL_INFO[p.level].name}</span>
+          <span className="font-pixel text-[9px] text-pale">LEVEL {LEVEL_INFO[p.level].number}: {LEVEL_INFO[p.level].name}</span>
           <ol className="mt-1 flex items-center gap-1 font-term text-lg leading-none" aria-label="Level progress">
             {stages.map((s, i) => (
               <li key={s.id} className={`flex items-center gap-1 ${i < si ? 'text-primary line-through' : i === si ? 'text-ice' : 'text-deep'}`}>

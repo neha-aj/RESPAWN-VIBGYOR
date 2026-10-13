@@ -1,4 +1,4 @@
-# VIOLET — Level Violet: Ultra-Refraction
+# VIOLET
 
 A 2D third-person neon action-puzzle shooter, drawn entirely in shades of violet. You play as Thanos. Destroy three security drones with five gravity-bound bullets, then bend a trick shot into the hidden Phase Door.
 

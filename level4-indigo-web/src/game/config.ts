@@ -1,4 +1,4 @@
-/* VIBGYOR · INDIGO — Orbital Singularity. Constants mirror level4-indigo/indigo.py exactly. */
+/* INDIGO. Constants mirror level4-indigo/indigo.py exactly. */
 export const W = 900, H = 650, FPS = 60;
 export const TIME_LIMIT = 300;
 export const LIVES = 3, SHOTS = 8;
@@ -23,7 +23,7 @@ export const LASER_PIVOT: P = [600, 350], LASER_HALF = 170;
 export const GATE_X = 810, GATE_W = 40, GATE_Y = 350, SAFE_GATE_SPEED = 4.5;
 export const SHIP = { R: 11, THRUST: 0.11, REVERSE: 0.06, TURN: 0.07, VMAX: 6.5 };
 
-export const LEVEL = { brand: 'VIBGYOR / INDIGO', title: 'ORBITAL SINGULARITY', victory: ['PHASE DOOR UNLOCKED', 'TRANSITIONING TO LEVEL: BLUE'] };
+export const LEVEL = { title: 'INDIGO', victory: ['PHASE DOOR UNLOCKED', 'TRANSITIONING TO LEVEL: BLUE'] };
 
 /** PLACEHOLDER — final rules will be supplied later. */
 export const RULES_PLACEHOLDER = {
