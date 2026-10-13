@@ -235,8 +235,7 @@ export class Renderer {
       g.fillStyle = rgb(C.VOID); g.fillRect(cx - 11, 44, 22, 22); g.strokeStyle = rgb(C.MOSS); g.lineWidth = 1; g.strokeRect(cx - 10.5, 44.5, 21, 21);
       drawGlyph(g, i, cx, 55, 7, rgb(on ? C.GLOW : C.MOSS), on ? 2 : 1);
     }
-    this.text('VIBGYOR / GREEN', 16, C.TEXT, W - 14, 20, 'right');
-    this.text('THE SYLVAN ABYSS', 12, C.TEXT_DIM, W - 14, 38, 'right');
+    this.text('GREEN', 16, C.TEXT, W - 14, 28, 'right');
     const tl = Math.max(0, game.timeLeft), low = tl < 60;
     this.text(`${Math.floor(tl / 60)}:${String(Math.floor(tl % 60)).padStart(2, '0')}`, 22, low && Math.floor(game.t * 4) % 2 ? C.PORTAL : C.TEXT, W - 14, 62, 'right');
     const bx = W / 2 - 130, by = H - 44;                                    // noise meter (the reference's bottom bar)

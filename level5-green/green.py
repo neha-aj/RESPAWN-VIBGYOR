@@ -1,5 +1,5 @@
 """
-VIBGYOR · GREEN — The Sylvan Abyss
+GREEN
 2D top-down survival horror. Thanos is lost in an ancient forest maze. Find three
 runes, slip past the phantom that hunts by sound, return to the giant tree and walk
 through the door in its trunk.
@@ -715,8 +715,7 @@ class HUD:
             c = (x0 + 122 + i * 26, 55)
             pg.draw.rect(surf, VOID, (c[0] - 11, c[1] - 11, 22, 22)); pg.draw.rect(surf, MOSS, (c[0] - 11, c[1] - 11, 22, 22), 1)
             draw_glyph(surf, i, c, 7, GLOW if i in g.collected else MOSS, 2 if i in g.collected else 1)
-        s.text(surf, "VIBGYOR / GREEN", s.f_sm, TEXT, (W - 14, 20), "midright")
-        s.text(surf, "THE SYLVAN ABYSS", s.f_xs, TEXT_DIM, (W - 14, 38), "midright")
+        s.text(surf, "GREEN", s.f_sm, TEXT, (W - 14, 28), "midright")
         tl = max(0, g.time_left); low = tl < 60
         s.text(surf, f"{int(tl // 60)}:{int(tl % 60):02d}", s.f_mid, PORTAL if low and int(g.t * 4) % 2 else TEXT, (W - 14, 62), "midright")
         # bottom: noise meter (the reference's bottom bar) + objective
@@ -737,7 +736,7 @@ class Game:
 
     def __init__(s, headless=False):
         pg.init()
-        s.display = pg.display.set_mode((W, H)); pg.display.set_caption("VIBGYOR · GREEN — The Sylvan Abyss")
+        s.display = pg.display.set_mode((W, H)); pg.display.set_caption("GREEN")
         s.clock = pg.time.Clock()
         mono = next((n for n in ("specialelite", "couriernew", "lucidaconsole", "consolas") if pg.font.match_font(n)), None)
         serif = next((n for n in ("palatinolinotype", "bookantiqua", "georgia", "timesnewroman") if pg.font.match_font(n)), None)
@@ -1082,9 +1081,7 @@ class Game:
         if s.state in ("TITLE", "RULES"):
             s.draw_scene(attract=True); s.overlay(150 if s.state == "TITLE" else 215)
             if s.state == "TITLE":
-                hud.text(f, "VIBGYOR", fm, TEXT_DIM, (W // 2, 40), distress=True)
-                hud.text(f, "LEVEL GREEN", fs, LIGHT, (W // 2, 66))
-                hud.text(f, "THE SYLVAN ABYSS", ft, TEXT, (W // 2, 128), distress=True)
+                hud.text(f, "GREEN", ft, TEXT, (W // 2, 110), distress=True)
                 hud.text(f, "THREE RUNES. ONE HAUNTED FOREST.", fm, PALE, (W // 2, 196), distress=True)
                 hud.text(f, "FIND THE RUNES. RETURN TO THE TREE. ENTER THE DOOR.", fs, TEXT, (W // 2, 226))
                 port = pg.Rect(0, 0, 92, 92); port.center = (W // 2 - 250, 300); hud.frame(f, port)
@@ -1097,7 +1094,7 @@ class Game:
             else:
                 hud.text(f, "RULES", fb, TEXT, (W // 2, 90), distress=True)
                 hud.text(f, "PLACEHOLDER — FINAL RULES TO BE ATTACHED", fx, LIGHT, (W // 2, 124))
-                lines = ("Thanos is lost in the Sylvan Abyss. Find the three green runes.",
+                lines = ("Thanos is lost in a haunted forest. Find the three green runes.",
                          "A phantom wanders the maze. It cannot see you — it hunts by sound.",
                          "Sprinting (SHIFT) makes noise rings; it hears them from about nine paces.",
                          "Walking is silent, but it will sense you if you brush right past it.",

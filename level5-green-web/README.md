@@ -1,4 +1,4 @@
-# VIBGYOR · GREEN — The Sylvan Abyss (web)
+# GREEN (web)
 
 The web version of GREEN. The gameplay, AI, maze and artwork match the Python version in `../level5-green/green.py`.
 
