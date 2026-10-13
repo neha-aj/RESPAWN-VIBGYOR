@@ -1092,7 +1092,7 @@ const CSS = `
 .bnw-root *{box-sizing:border-box}
 .bnw-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;min-height:72px;padding:8px 20px;border-bottom:1px solid var(--line);background:#050505;z-index:2}
 .bnw-brand{display:flex;align-items:baseline;gap:14px;font-family:${FONT};white-space:nowrap;overflow:hidden}
-.bnw-logo{font-size:34px;letter-spacing:.04em}.bnw-logo .w{color:transparent;-webkit-text-stroke:1px var(--ink)}
+.bnw-logo{font-size:34px;letter-spacing:.04em}.bnw-logo small,.bnw-big .n{font-family:'IM Fell English',Georgia,serif}.bnw-logo .w{color:transparent;-webkit-text-stroke:1px var(--ink)}
 .bnw-lv{font-size:14px;letter-spacing:.3em;color:var(--dim)}
 .bnw-timer{display:flex;flex-direction:column;align-items:center;min-width:220px}
 .bnw-clock{font-family:${FONT};font-size:44px;line-height:1;letter-spacing:.06em;font-variant-numeric:tabular-nums;transition:color .3s}
