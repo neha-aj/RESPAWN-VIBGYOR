@@ -7,7 +7,7 @@ import {
   WAVE_SPEED, type Move, type Pose, type RGB,
 } from './config';
 
-export type State = 'TITLE' | 'RULES' | 'INTRO' | 'FIGHT' | 'PAUSED' | 'DEFEAT' | 'BARRIER' | 'DOOR_REVEAL' | 'PORTAL' | 'VICTORY' | 'GAME_OVER';
+export type State = 'TITLE' | 'RULES' | 'CONTROLS' | 'INTRO' | 'FIGHT' | 'PAUSED' | 'DEFEAT' | 'BARRIER' | 'DOOR_REVEAL' | 'PORTAL' | 'VICTORY' | 'GAME_OVER';
 export type Sound = 'jab' | 'sword' | 'hit' | 'heavyhit' | 'dodge' | 'jump' | 'brace' | 'flash' | 'stun' | 'growl' | 'ko' | 'crack' | 'shatter' | 'slide' | 'portal' | 'win' | 'lose' | 'fight' | 'click';
 export interface Rect { x: number; y: number; w: number; h: number }
 export const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -263,11 +263,12 @@ export class Door {
   }
 }
 
+export const CONTROLS_FROM: State[] = ['TITLE', 'RULES', 'INTRO', 'FIGHT', 'PAUSED'];
 export const INPUT0: Input = { left: false, right: false, charge: false, jump: false, light: false, heavy: false, dodge: false, flash: false };
 type Pressed = Pick<Input, 'jump' | 'light' | 'heavy' | 'dodge' | 'flash'>;
 
 export class YellowGame implements Hooks {
-  state: State = 'TITLE'; t = 0;
+  state: State = 'TITLE'; t = 0; ret: State = 'TITLE';
   player = new Player(100, 1, PLAYER_HP); enemy = new Enemy(320, -1, ENEMY_HP); fx = new Effects(); door = new Door();
   waves: Wave[] = []; hitstop = 0; shake = 0; phaseT = 0; roundT = ROUND_TIME; combo = 0; comboT = 0; score = 0; cause = ''; flash = 0;
   introT = 0; vicT = 0;
@@ -298,9 +299,18 @@ export class YellowGame implements Hooks {
 
   // --------------------------------------------------- input (edge-triggered presses, held movement/charge)
   start() { this.reset(); this.state = 'INTRO'; this.music(true); }
+  /** Controls card: freezes the round (like pause) and returns to wherever it was opened from. */
+  openControls() {
+    if (!CONTROLS_FROM.includes(this.state)) return;
+    this.ret = this.state; this.state = 'CONTROLS';
+    this.pressed = { jump: false, light: false, heavy: false, dodge: false, flash: false }; this.chargeHum(false);
+  }
+  closeControls() { this.state = this.ret; }
   keyDown(key: string) {
     const st = this.state, k = key.toLowerCase();
-    if (st === 'TITLE') { if (k === 'enter') { this.sfx('click'); this.start(); } else if (k === 'h') this.state = 'RULES'; }
+    if (k === 'c' && CONTROLS_FROM.includes(st)) { this.openControls(); return; }
+    if (st === 'CONTROLS') { if (k === 'c' || k === 'escape' || k === 'enter') this.closeControls(); }
+    else if (st === 'TITLE') { if (k === 'enter') { this.sfx('click'); this.start(); } else if (k === 'h') this.state = 'RULES'; }
     else if (st === 'RULES') { if (k === 'enter' || k === 'h' || k === 'escape') this.state = 'TITLE'; }
     else if (st === 'FIGHT') {
       if (k === 'escape') { this.state = 'PAUSED'; this.chargeHum(false); return; }
@@ -318,7 +328,7 @@ export class YellowGame implements Hooks {
     for (const m of this.motes) { m[1] -= m[2]; m[0] += Math.sin(this.t * 0.01 + m[3]) * 0.15; m[1] = ((m[1] % 325) + 325) % 325; }
     this.shake *= 0.85; this.flash = Math.max(0, this.flash - 0.03);
     const st = this.state, pl = this.player, en = this.enemy;
-    if (st === 'TITLE' || st === 'RULES' || st === 'PAUSED') return;
+    if (st === 'TITLE' || st === 'RULES' || st === 'PAUSED' || st === 'CONTROLS') return;
     this.fx.update();
     if (st === 'INTRO') { this.introT++; if (this.introT === 150) this.sfx('fight', 0.7); if (this.introT >= 190) this.state = 'FIGHT'; return; }
     if (st === 'FIGHT') this.updateFight();

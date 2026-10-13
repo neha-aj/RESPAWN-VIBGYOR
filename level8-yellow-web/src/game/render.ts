@@ -1,7 +1,7 @@
 /* YELLOW renderer — golden throne-room arena on a 450 × 325 canvas (×2), fighters on a half-size layer (×4: chunky pixels),
  * and a pixel-font HUD after the reference beat-'em-up. Mirrors the drawing in yellow.py. */
 import {
-  C, DODGE_COOLDOWN, ENEMY_POSES, FIG, GROUND, H, INTRO_LINES, LH, LW, PLAYER_POSES, PORTAL_X, RULES, THANOS_DIMS,
+  C, DODGE_COOLDOWN, ENEMY_POSES, FIG, GROUND, H, INTRO_LINES, LH, LW, PLAYER_POSES, PORTAL_X, RULES, CONTROLS, THANOS_DIMS,
   VICTORY_FLASH, VICTORY_TEXT, W, WOLVERINE_DIMS, rgb, type Pose, type RGB,
 } from './config';
 import { Door, Enemy, Player, type Fighter, type YellowGame } from './sim';
@@ -166,7 +166,7 @@ export class Renderer {
   }
 
   draw(game: YellowGame) {
-    const L = this.L.getContext('2d')!, G = this.G.getContext('2d')!, st = game.state, pl = game.player, en = game.enemy, t = game.t;
+    const L = this.L.getContext('2d')!, G = this.G.getContext('2d')!, st = game.state === 'CONTROLS' ? game.ret : game.state, pl = game.player, en = game.enemy, t = game.t;
     this.t = t;
     G.fillStyle = '#000'; G.fillRect(0, 0, LW, LH);
     L.drawImage(this.arena, 0, 0);
@@ -272,23 +272,51 @@ export class Renderer {
   }
 
   private ui(game: YellowGame) {
-    const c = this.ctx, st = game.state, pl = game.player, en = game.enemy, t = game.t;
-    if (st === 'TITLE' || st === 'RULES') {
+    if (game.state === 'CONTROLS') { this.screen(game, game.ret); this.buttons = {}; this.controlsCard(); }   // the card sits on top; only its own button is live
+    else this.screen(game, game.state);
+  }
+  private controlsCard() {
+    const c = this.ctx;
+    c.fillStyle = rgb(C.INK, 0.67); c.fillRect(0, 0, W, H);
+    this.panel(130, 60, 640, 550, 0.96, C.ENERGY);
+    this.text('CONTROLS', 28, C.ENERGY, W / 2, 102, 'center', C.MUTED);
+    this.text('The game is paused while this card is open', 8, C.GOLD_HI, W / 2, 140);
+    c.font = `8px ${FONT}`;
+    CONTROLS.forEach(([keys, what], i) => {
+      const y = 180 + i * 31, w = c.measureText(keys).width + 16, x = W / 2 - 46 - w;
+      rect(c, x, y - 10, w, 22, C.INK); rect(c, x, y - 13, w, 22, C.DARK); c.strokeStyle = rgb(C.GOLD); c.lineWidth = 1; c.strokeRect(x + 0.5, y - 12.5, w - 1, 21);
+      this.text(keys, 8, C.FX, x + w / 2, y - 1, 'center', null);
+      this.text(what, 8, C.CREAM, W / 2 - 24, y - 1, 'left');
+    });
+    this.button('close', 'CLOSE', W / 2, 545);
+    this.text('C / ESC / ENTER  close', 8, C.GOLD_HI, W / 2, 590);
+  }
+  private screen(game: YellowGame, st: YellowGame['state']) {
+    const c = this.ctx, pl = game.player, en = game.enemy, t = game.t;
+    if (st === 'TITLE') {
       c.fillStyle = rgb(C.INK, 0.47); c.fillRect(0, 0, W, H);
       this.text('YELLOW', 72, C.ENERGY, W / 2, 120, 'center', C.MUTED);
-      if (st === 'TITLE') {
-        this.text('PRESS ENTER TO START', 14, Math.floor(t / 30) % 2 ? C.FX : C.ENERGY, W / 2, 205);
-        this.button('start', 'START', W / 2, 272); this.button('rules', 'RULES', W / 2, 326); this.button('exit', 'EXIT', W / 2, 380);
-        this.panel(140, 466, 620, 124, 0.78);
-        ['A/D or ARROWS move   W/UP jump', 'J Gauntlet jab   K double-bladed sword', 'SHIFT dodge   hold L charge   I Solar Flash', 'ESC pause   M mute'].forEach((l, i) => this.text(l, 10, C.CREAM, W / 2, 490 + i * 26));
-      } else {
-        this.panel(100, 190, 700, 400, 0.92);
-        this.text('RULES', 28, C.ENERGY, W / 2, 230);
-        if (RULES.isPlaceholder) this.text('PLACEHOLDER - FINAL RULES TO BE ATTACHED', 10, C.AMBER, W / 2, 268);
-        RULES.lines.forEach((l, i) => this.text(l, 9, C.CREAM, W / 2, 310 + i * 34));
-        this.text('ENTER / H  BACK', 10, C.GOLD_HI, W / 2, 560);
-      }
+      this.text('PRESS ENTER TO START', 14, Math.floor(t / 30) % 2 ? C.FX : C.ENERGY, W / 2, 205);
+      this.button('start', 'START', W / 2, 262); this.button('rules', 'RULES', W / 2, 314);
+      this.button('controls', 'CONTROLS', W / 2, 366); this.button('exit', 'EXIT', W / 2, 418);
+      this.panel(140, 458, 620, 124, 0.78);
+      ['A/D or ARROWS move   W/UP jump', 'J Gauntlet jab   K double-bladed sword', 'SHIFT dodge   hold L charge   I Solar Flash', 'ESC pause   M mute   H rules'].forEach((l, i) => this.text(l, 10, C.CREAM, W / 2, 482 + i * 26));
+      this.text('Forgot a key mid-fight? Press C or click CONTROLS (bottom left).', 8, C.GOLD_HI, W / 2, 606);
       this.soundButton(); return;
+    }
+    if (st === 'RULES') {
+      c.fillStyle = rgb(C.INK, 0.59); c.fillRect(0, 0, W, H);
+      this.panel(60, 36, 780, 570, 0.94);
+      this.text('RULES', 28, C.ENERGY, W / 2, 80, 'center', C.MUTED);
+      let y = 128;
+      for (const [head, lines] of RULES) {
+        this.text(head, 12, C.ENERGY, 96, y, 'left'); y += 30;
+        for (const l of lines) { this.text(l, 8, C.CREAM, 112, y, 'left'); y += 24; }
+        y += 10;
+      }
+      this.button('controls', 'CONTROLS', W / 2 - 130, 562); this.button('back', 'BACK', W / 2 + 130, 562);
+      this.text('ENTER / H  back      C  controls', 8, C.GOLD_HI, W / 2, 628);
+      return;
     }
     this.portrait(18, 14, 60, 56, 'thanos', t);
     this.text('THANOS', 10, C.CREAM, 90, 22, 'left');
@@ -322,7 +350,7 @@ export class Renderer {
       this.text('PAUSED', 64, C.ENERGY, W / 2, 190, 'center', C.MUTED);
       this.text('ESC resume  ·  R restart  ·  M mute', 12, C.CREAM, W / 2, 280);
       ['A/D move · W jump · J jab · K sword', 'SHIFT dodge · hold L charge · I Solar Flash'].forEach((l, i) => this.text(l, 10, C.GOLD_HI, W / 2, 330 + i * 26));
-      this.button('exit', 'EXIT', W / 2, 420);
+      this.button('controls', 'CONTROLS', W / 2, 420); this.button('exit', 'EXIT', W / 2, 474);
     } else if (st === 'DEFEAT' || st === 'BARRIER' || st === 'DOOR_REVEAL') {
       this.text(st === 'DEFEAT' ? 'K.O.!' : st === 'BARRIER' ? 'THE BARRIER CRACKS...' : 'THE PHASE DOOR OPENS', 24, C.ENERGY, W / 2, 160, 'center', C.MUTED);
     } else if (st === 'PORTAL') this.text('WALK INTO THE PHASE DOOR  >>', 14, Math.floor(t / 20) % 2 ? C.FX : C.ENERGY, W / 2, 160);
@@ -340,6 +368,12 @@ export class Renderer {
         this.text(`SCORE ${String(game.score).padStart(6, '0')}  ·  TIME LEFT ${Math.ceil(game.roundT / 60)}s`, 9, C.GOLD_HI, W / 2, 330);
         this.text('PRESS R TO RESTART', 14, Math.floor(t / 30) % 2 ? C.FX : C.ENERGY, W / 2, 380);
       }
+    }
+    if (st === 'INTRO' || st === 'FIGHT') {                                                 // always-visible reminder button
+      const m = this.mouse, b = { x: 14, y: H - 34, w: 150, h: 24 }, hover = !!m && m.x >= b.x && m.x <= b.x + b.w && m.y >= b.y && m.y <= b.y + b.h;
+      this.panel(b.x, b.y, b.w, b.h, 0.78, hover ? C.ENERGY : C.GOLD);
+      this.text('CONTROLS (C)', 9, hover ? C.FX : C.CREAM, b.x + b.w / 2, H - 21, 'center', null);
+      this.buttons.controls = b;
     }
     this.soundButton();
   }

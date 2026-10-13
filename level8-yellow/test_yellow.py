@@ -178,6 +178,24 @@ check("20: exact BLUE transition text", '"PHASE DOOR UNLOCKED. TRANSITIONING TO 
 [g.step() for _ in range(60)]; g.draw()
 g.key_down(pg.K_r); check("21: R restarts from the victory screen", g.state == "INTRO" and g.enemy.hp == g.enemy.max_hp and not g.door.open)
 
+# ---------- rules page + controls card ----------
+check("rules page is final (no placeholder)", "PLACEHOLDER" not in src and len(Y.RULES) >= 4)
+ctrl_text = " ".join(k + " " + a for k, a in Y.CONTROLS)
+check("controls card lists every key", all(k in ctrl_text for k in ("A / D", "W", "J", "K", "SHIFT", "hold L", "I", "ESC", "C", "M", "R")))
+g = Y.Game(headless=True); g.key_down(pg.K_h); g.draw()
+check("H opens the rules page", g.state == "RULES" and {"controls", "back"} <= set(g.buttons))
+g.action("controls"); g.draw(); check("rules page CONTROLS button opens the card", g.state == "CONTROLS" and set(g.buttons) == {"close"})
+g.action("close"); check("CLOSE returns to the rules page", g.state == "RULES")
+g.action("back"); check("BACK returns to the title", g.state == "TITLE")
+g = fight(); g.draw(); check("in-fight CONTROLS button is on screen", "controls" in g.buttons)
+t0, x0 = g.round_t, g.enemy.x
+g.action("controls"); [g.step() for _ in range(120)]; g.draw()
+check("clicking CONTROLS mid-fight freezes the round", g.state == "CONTROLS" and g.round_t == t0 and g.enemy.x == x0)
+g.key_down(pg.K_c); check("C closes the card and resumes the fight", g.state == "FIGHT")
+g.key_down(pg.K_c); g.key_down(pg.K_ESCAPE); check("ESC closes the card", g.state == "FIGHT")
+g.key_down(pg.K_ESCAPE); g.key_down(pg.K_c); g.draw(); g.key_down(pg.K_c)
+check("the card opens from the pause menu and returns to it", g.state == "PAUSED")
+
 # ---------- a bot that wins a real fight ----------
 def bot_fight(seed):
     g = fight(); pl, en = g.player, g.enemy; en.rng.seed(seed)

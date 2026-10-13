@@ -35,6 +35,9 @@ export class YellowEngine {
     if (k !== 'mute') this.audio.play('click');
     if (k === 'start') g.start();
     else if (k === 'rules') g.state = 'RULES';
+    else if (k === 'back') g.state = 'TITLE';
+    else if (k === 'controls') g.openControls();
+    else if (k === 'close') g.closeControls();
     else if (k === 'exit') { g.reset(); g.state = 'TITLE'; this.audio.musicOn(false); this.onExit(); }
     else if (k === 'mute') this.onMute();
     this.emit(true);

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ARENA_L, BARRIER_T, C, DEFEAT_T, DODGE_FRAMES, ENEMY_ATTACK_GAP, ENEMY_MOVES, FLASH_DMG, GROUND, PLAYER_MOVES, REVEAL_T, ROUND_TIME, VICTORY_TEXT, WALK } from './config';
+import { ARENA_L, BARRIER_T, C, CONTROLS, DEFEAT_T, DODGE_FRAMES, ENEMY_ATTACK_GAP, ENEMY_MOVES, FLASH_DMG, GROUND, PLAYER_MOVES, REVEAL_T, ROUND_TIME, RULES, VICTORY_TEXT, WALK } from './config';
 import { YellowGame } from './sim';
 
 const fight = () => { const g = new YellowGame(); g.keyDown('enter'); for (let i = 0; i < 200; i++) g.step(); return g; };
@@ -145,5 +145,26 @@ describe('AI, loss and the Phase Door', () => {
     }
     expect(wins).toBeGreaterThanOrEqual(3);
     const idle = fight(); run(idle, 900); expect(idle.player.hp).toBeLessThan(70);
+  });
+});
+
+describe('rules page + controls card', () => {
+  it('has final rules and a controls card listing every key', () => {
+    expect(RULES.length).toBeGreaterThanOrEqual(4);
+    expect(JSON.stringify(RULES)).not.toMatch(/PLACEHOLDER/);
+    const keys = CONTROLS.map(([k]) => k).join(' ');
+    for (const k of ['A / D', 'W', 'J', 'K', 'SHIFT', 'hold L', 'I', 'ESC', 'C', 'M', 'R']) expect(keys).toContain(k);
+  });
+  it('opens from the rules page and returns to it', () => {
+    const g = new YellowGame(); g.keyDown('h'); expect(g.state).toBe('RULES');
+    g.openControls(); expect(g.state).toBe('CONTROLS');
+    g.closeControls(); expect(g.state).toBe('RULES');
+  });
+  it('freezes the fight while open, and C / Esc close it', () => {
+    const g = fight(), t0 = g.roundT, x0 = g.enemy.x;
+    g.openControls(); run(g, 120); expect([g.state, g.roundT, g.enemy.x]).toEqual(['CONTROLS', t0, x0]);
+    g.keyDown('c'); expect(g.state).toBe('FIGHT');
+    g.keyDown('c'); g.keyDown('escape'); expect(g.state).toBe('FIGHT');
+    g.keyDown('escape'); g.keyDown('c'); g.keyDown('c'); expect(g.state).toBe('PAUSED');
   });
 });

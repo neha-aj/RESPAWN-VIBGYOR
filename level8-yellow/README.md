@@ -25,6 +25,7 @@ There are no asset files. Every pixel, sound effect and the music are generated 
 | ESC | Pause |
 | R | Restart (after a result, or from the pause menu) |
 | M | Mute |
+| C | Show or hide the controls card |
 
 ## What's in it
 
@@ -44,7 +45,8 @@ There are no asset files. Every pixel, sound effect and the music are generated 
 - **HUD:** portraits, chunky health bars that ease down, the Solar meter, a dodge cooldown ring, score and combo.
 - **Sound:** an original 140 BPM battle loop plus synthesized hits, swings, charge hum, shockwave, barrier and portal sounds.
 
-The Rules screen is a placeholder until the final rules are supplied.
+- **Rules page:** press H or click RULES on the title screen. It covers the goal, how you win and lose, fighting tips, the Solar Flash and the exit.
+- **Controls card:** lists every key and what it does. Open it with the CONTROLS button (on the title screen, the rules page, the pause menu, and bottom left during the fight) or press C at any time. The round freezes while the card is open. C, ESC, ENTER or CLOSE takes you back to where you were.
 
 ## Tests
 

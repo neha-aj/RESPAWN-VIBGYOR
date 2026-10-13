@@ -6,7 +6,7 @@ golden throne room. Beat it, smash the barrier, and walk through the Phase Door.
 Standalone: Python 3 + pygame only (python -m pip install pygame). Every pixel, sound and the music are
 generated in code. Yellow shades only.
 Controls: A/D or LEFT/RIGHT move · W/UP jump · J light (Gauntlet) · K heavy (double-bladed sword)
-          SHIFT dodge · hold L Solar charge · I Solar Flash · ESC pause · R restart · M mute
+          SHIFT dodge · hold L Solar charge · I Solar Flash · ESC pause · R restart · M mute · C controls card
 """
 import array, math, random, sys, threading
 import pygame as pg
@@ -52,6 +52,31 @@ DEFEAT_T, BARRIER_T, CRACK_T, REVEAL_T, VICTORY_FLASH = 90, 120, 60, 100, 40
 PORTAL_X, PORTAL_HALF = 421, 13
 
 INTRO_LINES = ["Claws of metal, little mutant. Mine are made of stone.", "FIGHT!"]
+
+# ------------------------------------------------------------------ rules page + controls card (shared wording with the web build)
+RULES = [
+    ("GOAL", ["You are THANOS. Knock out WOLVERINE before the 99-second clock hits 0."]),
+    ("WIN / LOSE", ["Empty his health bar (top right) to win.",
+                    "You lose if your health bar (top left) empties or time runs out."]),
+    ("FIGHTING", ["J is a fast jab. K is a slow sword swing that hits much harder.",
+                  "His claws GLOW before a big lunge - DODGE (SHIFT) or JUMP to avoid it."]),
+    ("SOLAR FLASH", ["Hold L to fill the SOLAR meter. You can't move, and any hit cancels it.",
+                     "At 100% press I: a shockwave that stuns him for 1.5 s. Punish him!"]),
+    ("THE EXIT", ["After the K.O. the barrier shatters. Walk right into the Phase Door."]),
+]
+CONTROLS = [
+    ("A / D  or  LEFT / RIGHT", "Move"),
+    ("W  or  UP", "Jump"),
+    ("J", "Light attack - Gauntlet jab"),
+    ("K", "Heavy attack - sword swing"),
+    ("SHIFT", "Dodge (short cooldown)"),
+    ("hold L", "Charge the Solar meter"),
+    ("I", "Solar Flash (meter at 100%)"),
+    ("ESC", "Pause"),
+    ("C", "Show / hide this controls card"),
+    ("M", "Mute"),
+    ("R", "Restart (paused or after a round)"),
+]
 
 
 # =================================================================== pose rig
@@ -694,7 +719,7 @@ class Door:
 
 # =================================================================== game
 class Game:
-    STATES = ("TITLE", "RULES", "INTRO", "FIGHT", "PAUSED", "DEFEAT", "BARRIER", "DOOR_REVEAL", "PORTAL", "VICTORY", "GAME_OVER")
+    STATES = ("TITLE", "RULES", "CONTROLS", "INTRO", "FIGHT", "PAUSED", "DEFEAT", "BARRIER", "DOOR_REVEAL", "PORTAL", "VICTORY", "GAME_OVER")
 
     def __init__(s, headless=False):
         pg.init()
@@ -706,7 +731,7 @@ class Game:
         s.audio = Mute() if headless else Synth()
         s.player, s.enemy, s.fx, s.door = Player(100, 1, PLAYER_HP), Enemy(320, -1, ENEMY_HP), Effects(), Door()
         s.F, s.FG = pg.Surface((LW // FIG + 1, LH // FIG + 1), pg.SRCALPHA), pg.Surface((LW // FIG + 1, LH // FIG + 1))
-        s.state, s.t, s.buttons, s.cache = "TITLE", 0, {}, {}
+        s.state, s.t, s.buttons, s.cache, s.ret = "TITLE", 0, {}, {}, "TITLE"
         s.motes = [[random.uniform(0, LW), random.uniform(0, LH), random.uniform(0.1, 0.35), random.uniform(0, 6)] for _ in range(36)]
         s.held = {"left": False, "right": False, "charge": False}
         s.reset()
@@ -735,10 +760,20 @@ class Game:
 
     # --------------------------------------------------- input (edge-triggered presses, held movement/charge)
     def start(s): s.reset(); s.state = "INTRO"; s.audio.music_on()
+    CONTROLS_FROM = ("TITLE", "RULES", "INTRO", "FIGHT", "PAUSED")
+    def open_controls(s):
+        """Controls card: freezes the round (like pause) and returns to wherever it was opened from."""
+        if s.state not in s.CONTROLS_FROM: return
+        s.ret, s.state = s.state, "CONTROLS"
+        s.pressed = {k: False for k in s.pressed}; s.audio.charge(False)
+    def close_controls(s): s.state = s.ret
     def key_down(s, key):
         st = s.state
         if key == pg.K_m: s.audio.toggle(); return
-        if st == "TITLE":
+        if key == pg.K_c and st in s.CONTROLS_FROM: s.open_controls(); return
+        if st == "CONTROLS":
+            if key in (pg.K_c, pg.K_ESCAPE, pg.K_RETURN, pg.K_KP_ENTER): s.close_controls()
+        elif st == "TITLE":
             if key in (pg.K_RETURN, pg.K_KP_ENTER): s.sfx("click"); s.start()
             elif key == pg.K_h: s.state = "RULES"
         elif st == "RULES":
@@ -761,7 +796,7 @@ class Game:
         for m in s.motes: m[1] -= m[2]; m[0] += math.sin(s.t * 0.01 + m[3]) * 0.15; m[1] %= LH
         s.shake *= 0.85; s.flash = max(0.0, s.flash - 0.03)
         st = s.state
-        if st in ("TITLE", "RULES", "PAUSED"): return
+        if st in ("TITLE", "RULES", "PAUSED", "CONTROLS"): return
         s.fx.update()
         pl, en = s.player, s.enemy
         if st == "INTRO":
@@ -916,6 +951,7 @@ class Game:
             x, y, sz, a = f[0], f[1], f[7], f[4]; k = 1 - f[6] / 70
             pts = [(x + math.cos(a + q * 2.1) * sz, y + math.sin(a + q * 2.1) * sz) for q in range(3)]
             pg.draw.polygon(L, OLIVE if k > 0.4 else MUTED, pts); pg.draw.polygon(L, GOLD, pts, 1)
+        if st == "CONTROLS": st = s.ret                                                         # draw what the card sits on
         if st not in ("TITLE", "RULES"):
             for x, y, f, p, tl in pl.afterimages:                                               # dodge afterimages
                 ghost = Player(x, f, 1); ghost.x, ghost.y, ghost.facing, ghost.cur, ghost.state = x, y, f, p, "dodge"
@@ -1005,24 +1041,50 @@ class Game:
         D.blit(pg.transform.scale(sub, (rect.w - 4, rect.h - 4)), (rect.x + 2, rect.y + 2))
 
     def draw_ui(s):
-        D, st, pl, en = s.display, s.state, s.player, s.enemy
-        if st in ("TITLE", "RULES"):
+        if s.state == "CONTROLS":
+            s.draw_screen(s.ret); s.buttons = {}                                               # the card sits on top; only its own button is live
+            s.draw_controls()
+        else: s.draw_screen(s.state)
+
+    def draw_controls(s):
+        D = s.display
+        o = pg.Surface((W, H), pg.SRCALPHA); o.fill((*INK, 170)); D.blit(o, (0, 0))
+        r = pg.Rect(150, 60, 600, 550); s.panel(r, 245, ENERGY)
+        s.text("CONTROLS", s.f_big, ENERGY, (W // 2, 100), shadow=MUTED)
+        s.text("The game is paused while this card is open", s.f_sm, GOLD_HI, (W // 2, 140))
+        for i, (keys, what) in enumerate(CONTROLS):
+            y = 180 + i * 31
+            img = s.f_sm.render(keys, True, FX); cap = img.get_rect(midright=(W // 2 - 26, y)).inflate(16, 8)
+            pg.draw.rect(D, INK, cap.move(0, 3)); pg.draw.rect(D, DARK, cap); pg.draw.rect(D, GOLD, cap, 1)
+            s.text(keys, s.f_sm, FX, cap.center, shadow=None)
+            s.text(what, s.f_sm, CREAM, (W // 2 - 4, y), "midleft")
+        s.button("close", "CLOSE", (W // 2, 545))
+        s.text("C / ESC / ENTER  close", s.f_sm, GOLD_HI, (W // 2, 590))
+
+    def draw_screen(s, st):
+        D, pl, en = s.display, s.player, s.enemy
+        if st == "TITLE":
             o = pg.Surface((W, H), pg.SRCALPHA); o.fill((*INK, 120)); D.blit(o, (0, 0))
             s.text("YELLOW", s.f_title, ENERGY, (W // 2, 120), shadow=MUTED)
-            if st == "TITLE":
-                s.text("PRESS ENTER TO START", s.f_mid, FX if (s.t // 30) % 2 else ENERGY, (W // 2, 205))
-                s.button("start", "START", (W // 2, 272)); s.button("rules", "RULES", (W // 2, 326)); s.button("exit", "EXIT", (W // 2, 380))
-                ctrl = ["A/D or ARROWS  move      W/UP  jump", "J  Gauntlet jab      K  double-bladed sword", "SHIFT  dodge      hold L  Solar charge      I  Solar Flash", "ESC  pause      M  mute"]
-                r = pg.Rect(150, 470, 600, 120); s.panel(r, 200)
-                for i, line in enumerate(ctrl): s.text(line, s.f_sm, CREAM, (W // 2, 490 + i * 26))
-            else:
-                r = pg.Rect(110, 190, 680, 400); s.panel(r, 235)
-                s.text("RULES", s.f_big, ENERGY, (W // 2, 230))
-                s.text("PLACEHOLDER - FINAL RULES TO BE ATTACHED", s.f_sm, AMBER, (W // 2, 268))
-                lines = ["You are THANOS. Defeat Wolverine in 99 seconds.", "J is fast and light. K is a slow, heavy sword swing.", "SHIFT dodges through attacks (with a cooldown).",
-                         "Hold L to charge; any hit interrupts it. At 100%, I fires Solar Flash.", "Solar Flash stuns Wolverine for 90 frames - punish him!", "Win, then walk into the Phase Door."]
-                for i, l in enumerate(lines): s.text(l, s.f_sm, CREAM, (W // 2, 310 + i * 34))
-                s.text("ENTER / H  BACK", s.f_sm, GOLD_HI, (W // 2, 560))
+            s.text("PRESS ENTER TO START", s.f_mid, FX if (s.t // 30) % 2 else ENERGY, (W // 2, 205))
+            s.button("start", "START", (W // 2, 262)); s.button("rules", "RULES", (W // 2, 314))
+            s.button("controls", "CONTROLS", (W // 2, 366)); s.button("exit", "EXIT", (W // 2, 418))
+            ctrl = ["A/D or ARROWS  move      W/UP  jump", "J  Gauntlet jab      K  double-bladed sword", "SHIFT  dodge      hold L  Solar charge      I  Solar Flash", "ESC  pause      M  mute      H  rules"]
+            r = pg.Rect(150, 462, 600, 120); s.panel(r, 200)
+            for i, line in enumerate(ctrl): s.text(line, s.f_sm, CREAM, (W // 2, 482 + i * 26))
+            s.text("Forgot a key mid-fight? Press C or click CONTROLS (bottom left).", s.f_sm, GOLD_HI, (W // 2, 608))
+            return
+        if st == "RULES":
+            o = pg.Surface((W, H), pg.SRCALPHA); o.fill((*INK, 150)); D.blit(o, (0, 0))
+            r = pg.Rect(70, 36, 760, 570); s.panel(r, 240)
+            s.text("RULES", s.f_big, ENERGY, (W // 2, 78), shadow=MUTED)
+            y = 125
+            for head, lines in RULES:
+                s.text(head, s.f_mid, ENERGY, (110, y), "midleft"); y += 30
+                for l in lines: s.text(l, s.f_sm, CREAM, (130, y), "midleft"); y += 24
+                y += 10
+            s.button("controls", "CONTROLS", (W // 2 - 130, 562)); s.button("back", "BACK", (W // 2 + 130, 562))
+            s.text("ENTER / H  back      C  controls", s.f_sm, GOLD_HI, (W // 2, 628))
             return
         # HUD (after the reference: portraits, chunky bars, score and combo)
         s.portrait(pg.Rect(18, 14, 60, 56), "thanos")
@@ -1062,7 +1124,7 @@ class Game:
             s.text("PAUSED", s.f_title, ENERGY, (W // 2, 190), shadow=MUTED)
             s.text("ESC resume   ·   R restart   ·   M mute", s.f_mid, CREAM, (W // 2, 280))
             for i, l in enumerate(("A/D move · W jump · J jab · K sword", "SHIFT dodge · hold L charge · I Solar Flash")): s.text(l, s.f_sm, GOLD_HI, (W // 2, 330 + i * 26))
-            s.button("exit", "EXIT", (W // 2, 420))
+            s.button("controls", "CONTROLS", (W // 2, 420)); s.button("exit", "EXIT", (W // 2, 474))
         elif st in ("DEFEAT", "BARRIER", "DOOR_REVEAL"):
             s.text("K.O.!" if st == "DEFEAT" else ("THE BARRIER CRACKS..." if st == "BARRIER" else "THE PHASE DOOR OPENS"), s.f_big, ENERGY, (W // 2, 160), shadow=MUTED)
         elif st == "PORTAL":
@@ -1080,6 +1142,9 @@ class Game:
                 s.text("PHASE DOOR UNLOCKED. TRANSITIONING TO LEVEL: BLUE", s.f_mid, DOOR, (W // 2, 290), shadow=MUTED)
                 s.text(f"SCORE {s.score:06d}   ·   TIME LEFT {math.ceil(s.round_t / FPS)}s", s.f_sm, GOLD_HI, (W // 2, 330))
                 s.text("PRESS R TO RESTART", s.f_mid, FX if (s.t // 30) % 2 else ENERGY, (W // 2, 380))
+        if st in ("INTRO", "FIGHT"):                                                            # always-visible reminder button
+            cb = pg.Rect(14, H - 34, 150, 24); hover = cb.collidepoint(pg.mouse.get_pos()) if pg.mouse.get_focused() else False
+            s.panel(cb, 200, ENERGY if hover else GOLD); s.text("CONTROLS (C)", s.f_sm, FX if hover else CREAM, cb.center, shadow=None); s.buttons["controls"] = cb
         snd = pg.Rect(W - 110, H - 34, 96, 24); s.panel(snd, 200); s.text("MUTED" if s.audio.muted else "SOUND", s.f_sm, CREAM, snd.center, shadow=None); s.buttons["mute"] = snd
 
     # --------------------------------------------------- loop
@@ -1087,6 +1152,9 @@ class Game:
         if k != "mute": s.sfx("click")
         if k == "start": s.start()
         elif k == "rules": s.state = "RULES"
+        elif k == "back": s.state = "TITLE"
+        elif k == "controls": s.open_controls()
+        elif k == "close": s.close_controls()
         elif k == "exit": s.running = False
         elif k == "mute": s.audio.toggle()
 

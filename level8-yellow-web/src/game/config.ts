@@ -72,8 +72,24 @@ export const ENEMY_POSES: Record<string, Pose> = {             // Wolverine: low
 };
 export const THANOS_DIMS = [11, 11, 22, 30, 11, 11] as const;   // thigh, shin, torso, shoulder width, upper arm, forearm
 export const WOLVERINE_DIMS = [10, 10, 18, 24, 10, 10] as const;
-export const RULES = {
-  isPlaceholder: true,
-  lines: ['You are THANOS. Defeat Wolverine in 99 seconds.', 'J is fast and light. K is a slow, heavy sword swing.', 'SHIFT dodges through attacks (with a cooldown).',
-    'Hold L to charge; any hit interrupts it. At 100%, I fires Solar Flash.', 'Solar Flash stuns Wolverine for 90 frames - punish him!', 'Win, then walk into the Phase Door.'],
-};
+/** Rules page and controls card — same wording as yellow.py. */
+export const RULES: [string, string[]][] = [
+  ['GOAL', ['You are THANOS. Knock out WOLVERINE before the 99-second clock hits 0.']],
+  ['WIN / LOSE', ['Empty his health bar (top right) to win.', 'You lose if your health bar (top left) empties or time runs out.']],
+  ['FIGHTING', ['J is a fast jab. K is a slow sword swing that hits much harder.', 'His claws GLOW before a big lunge - DODGE (SHIFT) or JUMP to avoid it.']],
+  ['SOLAR FLASH', ["Hold L to fill the SOLAR meter. You can't move, and any hit cancels it.", 'At 100% press I: a shockwave that stuns him for 1.5 s. Punish him!']],
+  ['THE EXIT', ['After the K.O. the barrier shatters. Walk right into the Phase Door.']],
+];
+export const CONTROLS: [string, string][] = [
+  ['A / D  or  LEFT / RIGHT', 'Move'],
+  ['W  or  UP', 'Jump'],
+  ['J', 'Light attack - Gauntlet jab'],
+  ['K', 'Heavy attack - sword swing'],
+  ['SHIFT', 'Dodge (short cooldown)'],
+  ['hold L', 'Charge the Solar meter'],
+  ['I', 'Solar Flash (meter at 100%)'],
+  ['ESC', 'Pause'],
+  ['C', 'Show / hide this controls card'],
+  ['M', 'Mute'],
+  ['R', 'Restart (paused or after a round)'],
+];

@@ -19,7 +19,7 @@ Open http://localhost:5179 in a desktop browser.
 | `npm test` | Palette, flow, combat, dodge, charge, the 90-frame stun, AI, loss and restart, the Phase Door sequence, and a bot that wins |
 | `npm run build` | Builds a static site in `dist/` |
 
-The controls are the same as the Python version.
+The controls, the rules page and the controls card (the CONTROLS button, or press C) are the same as in the Python version.
 
 ## Merging into a larger game
 
