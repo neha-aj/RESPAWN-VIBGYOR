@@ -9,9 +9,10 @@ import { GreenEngine, type Snapshot } from '../game/engine';
 /**
  * Level GREEN as one self-contained component, ready to drop into a larger game.
  *   onComplete — called once when Thanos enters the tree portal
+ *   onDeath    — called once each time the Game Over screen appears
  *   onExit     — called by the Exit button (defaults to a "you can close this tab" screen)
  */
-export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => void; onExit?: () => void }) {
+export default function GreenLevel({ onComplete, onDeath, onExit }: { onComplete?: () => void; onDeath?: () => void; onExit?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GreenEngine | null>(null);
   const audioRef = useRef<GreenAudio | null>(null);
@@ -21,6 +22,7 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
   const [muted, setMuted] = useState(false);
   const [exited, setExited] = useState(false);
   const mutedRef = useRef(false), completeRef = useRef(onComplete); completeRef.current = onComplete;
+  const deathRef = useRef(onDeath); deathRef.current = onDeath;
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   const toggleMute = useCallback(() => { const m = !mutedRef.current; mutedRef.current = m; audio.setMuted(m); setMuted(m); }, [audio]);
@@ -36,6 +38,8 @@ export default function GreenLevel({ onComplete, onExit }: { onComplete?: () => 
   const click = (fn: () => void) => () => { audio.play('click'); fn(); };
   const exit = () => (onExit ? onExit() : setExited(true));
   const state = snap?.state ?? 'TITLE';
+  const gameOver = state === 'GAME_OVER';
+  useEffect(() => { if (gameOver) deathRef.current?.(); }, [gameOver]);
   const tl = snap?.timeLeft ?? 0;
 
   return (

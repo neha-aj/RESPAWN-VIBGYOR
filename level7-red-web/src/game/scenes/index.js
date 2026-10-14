@@ -8,7 +8,8 @@ export const SCENES = [RedTitle, Level7RagePlatformer];
 
 /**
  * Creates the RED game inside `parent`.
- * hooks.onComplete(id) is called once when the level is completed ('red'); hooks.onExit() by the title's EXIT button.
+ * hooks.onComplete(id) is called once when the level is completed ('red'); hooks.onExit() by the title's EXIT button;
+ * hooks.onDeath() once Thanos has died RED_CHECKPOINT_DEATHS times (RED has no lives, so this is its Game Over in the full game).
  */
 export function createRedGame(parent, hooks = {}) {
   const audio = new RedAudio();

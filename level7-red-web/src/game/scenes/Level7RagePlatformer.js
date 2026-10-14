@@ -12,6 +12,8 @@ import {
 export { LEVEL7_DATA, NARRATOR, RED_FROM_START, fleeVx, jumpHeight, reflectVx, sineY } from '../redLogic.js';
 
 const DEATH_ANIM = 0.6, IDLE_LINE = 20;
+/** RED has no lives: in the full game, this many deaths count as losing the level (back to the last checkpoint). */
+export const RED_CHECKPOINT_DEATHS = 10;
 
 export default class Level7RagePlatformer extends LevelBase {
   constructor() { super('Level7RagePlatformer'); }
@@ -155,6 +157,7 @@ export default class Level7RagePlatformer extends LevelBase {
     b.setVelocity(0, 0); b.enable = false; this.player.setVisible(false);
     this.shards = Array.from({ length: 14 }, (_, i) => { const a = (i / 14) * Math.PI * 2; return { x: cx, y: cy, vx: Math.cos(a) * (180 + (i % 3) * 60), vy: Math.sin(a) * (180 + (i % 4) * 50) - 120, rot: i, size: 6 + (i % 3) * 3 }; });
     this.narrator.say(deathLine(this.room.key, this.roomDeaths[r], this.totalDeaths));
+    if (this.totalDeaths === RED_CHECKPOINT_DEATHS) this.hooks.onDeath?.();
     this.sfx('bonk', 0.8);
     this.cameras.main.shake(160, 0.006);
   }

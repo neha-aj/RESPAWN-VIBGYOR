@@ -3,31 +3,28 @@
  * Each spectrum band rings one note of an ascending scale, so by RED the player has
  * heard the whole run climb, V → R.
  */
+import { audio } from './audio';
 
 // C major from C5: V I B G Y O R
 const BAND_NOTES = [523.25, 587.33, 659.25, 698.46, 783.99, 880.0, 987.77];
 
 class Sfx {
-  private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
   private echo: DelayNode | null = null;
 
-  /** Created lazily; resumes if the browser started it suspended. */
+  /** The shell's shared AudioContext; this class owns a sub-mix on the effects bus. */
   private ac(): AudioContext | null {
-    if (!this.ctx) {
-      const C = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!C) return null;
-      const ctx = new C();
-      const out = ctx.createGain(); out.gain.value = 0.55; out.connect(ctx.destination);
+    const ctx = audio.get(); if (!ctx) return null;
+    if (!this.out) {
+      const out = ctx.createGain(); out.gain.value = 0.55; out.connect(audio.fx);
       // one soft feedback echo shared by the chimes
       const echo = ctx.createDelay(1); echo.delayTime.value = 0.27;
       const fb = ctx.createGain(); fb.gain.value = 0.32;
       const damp = ctx.createBiquadFilter(); damp.type = 'lowpass'; damp.frequency.value = 2600;
       echo.connect(damp); damp.connect(fb); fb.connect(echo); damp.connect(out);
-      this.ctx = ctx; this.out = out; this.echo = echo;
+      this.out = out; this.echo = echo;
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {});
-    return this.ctx;
+    return ctx;
   }
 
   private noise(ctx: AudioContext, seconds: number): AudioBufferSourceNode {
@@ -105,6 +102,87 @@ class Sfx {
     const o = ctx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(880, t); o.frequency.setValueAtTime(1320, t + 0.05);
     const g = this.env(ctx, t, 0.04, 0.005, 0.12);
     o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.2);
+  }
+  /* ---------- torch, menu, checkpoints ---------- */
+
+  /** The torch catches: a click and a soft flare of flame. */
+  torch() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    const c = this.noise(ctx, 0.05), hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+    const cg = this.env(ctx, t, 0.35, 0.001, 0.04); c.connect(hp); hp.connect(cg); cg.connect(this.out); c.start(t);
+    const f = this.noise(ctx, 1), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.7;
+    bp.frequency.setValueAtTime(400, t + 0.03); bp.frequency.exponentialRampToValueAtTime(1400, t + 0.5);
+    const fg = this.env(ctx, t + 0.03, 0.16, 0.12, 0.7); f.connect(bp); bp.connect(fg); fg.connect(this.out); f.start(t + 0.03); f.stop(t + 1);
+  }
+
+  /** The beam sweeping across the wall: a breathy whoosh. */
+  sweep(dur = 0.8) {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime, n = this.noise(ctx, dur + 0.2), f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(1800, t + dur * 0.5); f.frequency.exponentialRampToValueAtTime(600, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + dur * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t); n.stop(t + dur + 0.1);
+  }
+
+  /** The beam lands on a panel: a low hit, then the band's note rings. */
+  landOn(band: number) {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.35);
+    const g = this.env(ctx, t, 0.45, 0.004, 0.45); o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.6);
+    this.bell(BAND_NOTES[band] ?? BAND_NOTES[0], 0.02, 0.2, 2.4);
+    this.bell((BAND_NOTES[band] ?? BAND_NOTES[0]) * 1.5, 0.1, 0.06, 1.6);
+  }
+
+  /** Diving into the panel: a rising rush that ends in a soft thump. */
+  zoom(dur = 1.6) {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime, n = this.noise(ctx, dur + 0.3), f = ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.Q.value = 3; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(5200, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14, t + dur); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t); n.stop(t + dur + 0.3);
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(60, t); o.frequency.exponentialRampToValueAtTime(240, t + dur);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const og = ctx.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.05, t + dur); og.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.2);
+    o.connect(lp); lp.connect(og); og.connect(this.out); o.start(t); o.stop(t + dur + 0.3);
+  }
+
+  /** Menu cursor moves. */
+  move() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 660;
+    const g = this.env(ctx, t, 0.03, 0.002, 0.05); o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.08);
+  }
+
+  /** Menu confirm: a bright two-note arpeggio. */
+  select() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    [523.25, 783.99, 1046.5].forEach((f, i) => {
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f;
+      const g = this.env(ctx, t + i * 0.055, 0.045, 0.003, 0.14); o.connect(g); g.connect(this.out!); o.start(t + i * 0.055); o.stop(t + i * 0.055 + 0.2);
+    });
+  }
+
+  /** Thanos falls: a heavy descending toll. */
+  fallen() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    [[146.83, 0], [138.59, 0.5], [110, 1.0]].forEach(([f, at]) => this.bell(f, at, 0.3, 2.6));
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(36, t + 1.8);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+    const g = this.env(ctx, t, 0.16, 0.02, 1.9); o.connect(lp); lp.connect(g); g.connect(this.out); o.start(t); o.stop(t + 2.1);
+  }
+
+  /** Respawning at a checkpoint: a rising shimmer that resolves on the band's note. */
+  respawn(band: number) {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime, n = this.noise(ctx, 1.4), f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 4; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(6000, t + 1.1);
+    const g = this.env(ctx, t, 0.08, 0.9, 0.3); n.connect(f); f.connect(g); g.connect(this.out); n.start(t); n.stop(t + 1.4);
+    this.bell(BAND_NOTES[band] ?? BAND_NOTES[0], 1.0, 0.22, 2.4);
+    this.bell((BAND_NOTES[band] ?? BAND_NOTES[0]) * 2, 1.06, 0.07, 1.4);
   }
 }
 

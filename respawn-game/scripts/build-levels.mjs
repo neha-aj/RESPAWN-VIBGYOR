@@ -1,11 +1,13 @@
-/* Builds every web level and copies it into public/levels/<id>/, and copies the
- * colour videos into public/videos/. Run from respawn-game/:  npm run levels
+/* Builds every web level and copies it into public/levels/<id>/. Run from respawn-game/:
+ *   npm run levels
  *
  *   --skip-build     only copy existing dist/ folders (faster when nothing changed)
- *   VIDEO_DIR=...    where V.mp4, I.mp4 ... R.mp4 live (only needed if public/videos is empty)
+ *
+ * Each copied index.html gets the sound bridge (public/respawn-audio.js) first in its <head>,
+ * so the menu's SOUND / MASTER VOLUME settings reach the level.
  */
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,19 +39,9 @@ for (const [id, folder] of Object.entries(LEVELS)) {
   const out = join(shell, 'public', 'levels', id);
   rmSync(out, { recursive: true, force: true });
   cpSync(join(dir, 'dist'), out, { recursive: true });
+  const page = join(out, 'index.html');
+  writeFileSync(page, readFileSync(page, 'utf8').replace('<head>', '<head>\n    <script src="../../respawn-audio.js"></script>'));
   console.log(`[${id}] → public/levels/${id}`);
 }
 
-const videos = join(shell, 'public', 'videos');
-const need = ['V', 'I', 'B', 'G', 'Y', 'O', 'R'].filter((c) => !existsSync(join(videos, `${c}.mp4`)));
-if (need.length) {
-  const src = process.env.VIDEO_DIR ?? resolve(repo, '..', 'pravrutti 2.0', 'respawn infodeets');
-  mkdirSync(videos, { recursive: true });
-  for (const c of need) {
-    const f = join(src, `${c}.mp4`);
-    if (!existsSync(f)) { console.warn(`! missing ${f}`); continue; }
-    cpSync(f, join(videos, `${c}.mp4`));
-    console.log(`[video] ${c}.mp4 → public/videos`);
-  }
-}
 console.log(`done: ${readdirSync(join(shell, 'public', 'levels')).length} levels ready`);

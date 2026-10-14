@@ -7,6 +7,11 @@ function notifyComplete(level: string) {
   if (window.parent !== window) window.parent.postMessage({ type: 'respawn:complete', level }, '*');
 }
 
+/** When running inside the full game, tell the host the run was lost (time ran out), so it can send Thanos back to the last checkpoint. */
+function notifyDeath(level: string) {
+  if (window.parent !== window) window.parent.postMessage({ type: 'respawn:death', level }, '*');
+}
+
 /**
  * Host for the larger escape game. Level 1's result is read from
  * localStorage ('zerohour.level1.order') when the full game provides it;
@@ -22,5 +27,5 @@ function readPreviousOrder(): readonly Shape[] {
 }
 
 export default function ZeroHourApp() {
-  return <BlueLevel previousOrder={readPreviousOrder()} onComplete={() => notifyComplete('blue')} />;
+  return <BlueLevel previousOrder={readPreviousOrder()} onComplete={() => notifyComplete('blue')} onDeath={() => notifyDeath('blue')} />;
 }

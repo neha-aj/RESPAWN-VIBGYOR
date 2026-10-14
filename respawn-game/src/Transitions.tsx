@@ -35,7 +35,54 @@ export function SpectrumCard({ band, leaving, finale }: { band: number; leaving:
 }
 
 /**
- * A colour video, letterboxed on black. Fades in once it is actually playing.
+ * Hold SPACE (or hold the mouse button) to skip a cutscene. The prompt only shows once the
+ * player touches a key or the mouse, so it never sits on top of the scene uninvited.
+ */
+export function useHoldSkip(onSkip: () => void, enabled = true) {
+  const [prompt, setPrompt] = useState(false);
+  const [held, setHeld] = useState(0);
+  const cb = useRef(onSkip); cb.current = onSkip;
+  useEffect(() => {
+    if (!enabled) return;
+    let holding = false, start = 0, raf = 0, hide = 0, done = false;
+    const HOLD = 900;
+    const show = () => { setPrompt(true); clearTimeout(hide); hide = window.setTimeout(() => { if (!holding) setPrompt(false); }, 2200); };
+    const tick = () => {
+      if (!holding) return;
+      const p = Math.min(1, (performance.now() - start) / HOLD);
+      setHeld(p);
+      if (p >= 1) { holding = false; done = true; setHeld(0); setPrompt(false); sfx.blip(); cb.current(); return; }
+      raf = requestAnimationFrame(tick);
+    };
+    const down = () => { show(); if (holding || done) return; holding = true; start = performance.now(); raf = requestAnimationFrame(tick); };
+    const up = () => { holding = false; cancelAnimationFrame(raf); setHeld(0); show(); };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === ' ') { e.preventDefault(); if (!e.repeat) down(); } else show(); };
+    const onKeyUp = (e: KeyboardEvent) => { if (e.key === ' ') up(); };
+    window.addEventListener('keydown', onKeyDown); window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('mousedown', down); window.addEventListener('mouseup', up); window.addEventListener('mousemove', show);
+    return () => {
+      cancelAnimationFrame(raf); clearTimeout(hide);
+      window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('mousedown', down); window.removeEventListener('mouseup', up); window.removeEventListener('mousemove', show);
+    };
+  }, [enabled]);
+  return { prompt, held };
+}
+
+export function SkipPrompt({ prompt, held }: { prompt: boolean; held: number }) {
+  return (
+    <div className={`skip${prompt || held > 0 ? ' show' : ''}`} aria-hidden={!prompt}>
+      <svg viewBox="0 0 36 36" className="skip-ring">
+        <circle cx="18" cy="18" r="15" className="track" />
+        <circle cx="18" cy="18" r="15" className="fill" style={{ strokeDashoffset: 94.25 * (1 - held) }} />
+      </svg>
+      <span>HOLD <kbd>SPACE</kbd> TO SKIP</span>
+    </div>
+  );
+}
+
+/**
+ * A video (the intro and outro you add later), letterboxed on black. Fades in once it is actually playing.
  * Hold SPACE (or hold the mouse button) to skip; the prompt only shows once the player
  * touches a key or the mouse, so it never sits on top of the video uninvited.
  * A missing or broken video simply counts as finished, so the run never gets stuck.
@@ -44,8 +91,6 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const [prompt, setPrompt] = useState(false);
-  const [held, setHeld] = useState(0);
   const ended = useRef(false);
   const end = useRef(onEnd); end.current = onEnd;
   const finish = () => { if (!ended.current) { ended.current = true; end.current(); } };
@@ -59,30 +104,7 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
     return () => clearTimeout(t);
   }, []);
 
-  // hold-to-skip
-  useEffect(() => {
-    let holding = false, start = 0, raf = 0, hide = 0;
-    const HOLD = 900;
-    const show = () => { setPrompt(true); clearTimeout(hide); hide = window.setTimeout(() => { if (!holding) setPrompt(false); }, 2200); };
-    const tick = () => {
-      if (!holding) return;
-      const p = Math.min(1, (performance.now() - start) / HOLD);
-      setHeld(p);
-      if (p >= 1) { holding = false; sfx.blip(); finish(); return; }
-      raf = requestAnimationFrame(tick);
-    };
-    const down = () => { show(); if (holding || ended.current) return; holding = true; start = performance.now(); raf = requestAnimationFrame(tick); };
-    const up = () => { holding = false; cancelAnimationFrame(raf); setHeld(0); show(); };
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === ' ') { e.preventDefault(); if (!e.repeat) down(); } else show(); };
-    const onKeyUp = (e: KeyboardEvent) => { if (e.key === ' ') up(); };
-    window.addEventListener('keydown', onKeyDown); window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('mousedown', down); window.addEventListener('mouseup', up); window.addEventListener('mousemove', show);
-    return () => {
-      cancelAnimationFrame(raf); clearTimeout(hide);
-      window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('mousedown', down); window.removeEventListener('mouseup', up); window.removeEventListener('mousemove', show);
-    };
-  }, []);
+  const { prompt, held } = useHoldSkip(finish);
 
   const onTime = () => {
     const v = ref.current!;
@@ -99,13 +121,7 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
           ▶ PLAY
         </button>
       )}
-      <div className={`skip${prompt || held > 0 ? ' show' : ''}`} aria-hidden={!prompt}>
-        <svg viewBox="0 0 36 36" className="skip-ring">
-          <circle cx="18" cy="18" r="15" className="track" />
-          <circle cx="18" cy="18" r="15" className="fill" style={{ strokeDashoffset: 94.25 * (1 - held) }} />
-        </svg>
-        <span>HOLD <kbd>SPACE</kbd> TO SKIP</span>
-      </div>
+      <SkipPrompt prompt={prompt} held={held} />
     </div>
   );
 }

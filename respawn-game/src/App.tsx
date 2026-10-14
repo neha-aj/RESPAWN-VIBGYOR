@@ -1,22 +1,31 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { CHAPTERS, startChapter } from './sequence';
+import { audio } from './audio';
+import { LetterReveal } from './LetterReveal';
+import { LogoIntro } from './LogoIntro';
+import { BootScreen, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
+import { music } from './music';
+import {
+  beatenBefore, chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_VIDEO, OUTRO_VIDEO, respawnAt, startChapter, type LevelId,
+} from './sequence';
+import { settings } from './settings';
 import { sfx } from './sfx';
 import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
 
 /*
- * RESPAWN: every level, back to back.
+ * RESPAWN: the whole game, start to finish.
  *
- * Each level runs in its own iframe (its own styles, fonts, keys and audio; removing the
- * iframe shuts the level down) and posts { type: 'respawn:complete' } to this window when
- * it is won. Between levels the shell plays one continuous transition:
+ *   PRESS ANY KEY ─► intro video (yours, when added) ─► logo: Thanos's torch finds V I B G Y O R
+ *   ─► main menu (START · SETTINGS · HOW IT WORKS · STOP, with the roadmap) ─► the rules card
+ *   ─► BnW ─► for each colour: spectrum card ─► torch clip into its letter ─► the level
+ *   ─► after RED: the strip lights up ─► outro + credits video (yours, when added) ─► menu
  *
- *   victory hold ─► iris closes (pauses on a pinhole) ─► spectrum card: the next colour
- *   ignites on the V-I-B-G-Y-O-R strip with its note ─► colour video (hold SPACE to skip;
- *   the next level loads behind it) ─► colour bloom + iris opens on the new level
+ * Each level runs in its own iframe and posts { type: 'respawn:complete' } when won and
+ * { type: 'respawn:death' } when lost (its Game Over). A death sends Thanos back to the last
+ * checkpoint beaten (see sequence.ts). `?chapter=<id>` jumps straight into a level.
  */
 
 /**
- * A level that loaded hidden (behind a video) could not take focus, so its React
+ * A level that loaded hidden (behind a cutscene) could not take focus, so its React
  * `autoFocus` (e.g. the START button) silently did nothing. Once the level is revealed,
  * focus that element so ENTER works as it does when the level runs on its own.
  */
@@ -29,36 +38,52 @@ function restoreAutofocus(doc: Document | null | undefined) {
   }
 }
 
-type Signal = 'complete' | 'continue' | 'videoEnd';
+/** A video you have added (served as a video, not the page's fallback HTML). */
+async function videoExists(url: string) {
+  try { const r = await fetch(url, { method: 'HEAD' }); return r.ok && (r.headers.get('content-type') ?? '').startsWith('video'); }
+  catch { return false; }
+}
+
+type Signal = 'complete' | 'death' | 'continue' | 'videoEnd' | 'boot' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
+type Scene = 'boot' | 'logo' | 'menu' | 'rules' | 'stopped' | 'end' | null;
 const CANCEL = Symbol('cancel');
 
 interface Iris { d: string; ms: number; color: string; ring: boolean }
 const IRIS_OPEN = '165vmax', IRIS_PEEK = '20vmin', IRIS_SHUT = '0px';
 
 export default function App() {
-  const [level, setLevel] = useState<{ idx: number; visible: boolean } | null>(null);
+  const [scene, setScene] = useState<Scene>(null);
+  const [level, setLevel] = useState<{ idx: number; visible: boolean; run: number } | null>(null);
   const [iris, setIris] = useState<Iris | null>({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
   const [won, setWon] = useState<{ hold: number; color: string } | null>(null);
+  const [fallen, setFallen] = useState<{ back: LevelId; show: boolean } | null>(null);
   const [card, setCard] = useState<{ band: number; leaving: boolean; finale?: boolean } | null>(null);
+  const [reveal, setReveal] = useState<{ band: number; key: number; fading: boolean } | null>(null);
+  const [respawn, setRespawn] = useState<{ band: number; leaving: boolean } | null>(null);
   const [video, setVideo] = useState<{ src: string; color: string; key: number; fading: boolean } | null>(null);
   const [bloom, setBloom] = useState<{ color: string; key: number } | null>(null);
+  const [crt, setCrt] = useState(settings.get().crt);
+  useEffect(() => settings.subscribe((s) => setCrt(s.crt)), []);
 
   const frameRef = useRef<HTMLIFrameElement>(null);
   const shieldRef = useRef<HTMLDivElement>(null);
 
   /* ---------- signals: latched, so one that fires early is not lost ---------- */
   const latched = useRef(new Set<Signal>());
-  const waiter = useRef<{ kind: Signal; resolve: () => void } | null>(null);
+  const waiter = useRef<{ kinds: Signal[]; resolve: (k: Signal) => void } | null>(null);
   const signal = useCallback((kind: Signal) => {
-    if (waiter.current?.kind === kind) { const w = waiter.current; waiter.current = null; w.resolve(); }
+    const w = waiter.current;
+    if (w && w.kinds.includes(kind)) { waiter.current = null; w.resolve(kind); }
     else latched.current.add(kind);
   }, []);
   const continueFrom = useRef(0);   // input on the victory hold only counts after this time
 
-  // a level reports a win
+  // a level reports a win or a loss
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'respawn:complete' && e.source && e.source === frameRef.current?.contentWindow) signal('complete');
+      if (!e.source || e.source !== frameRef.current?.contentWindow) return;
+      if (e.data?.type === 'respawn:complete') signal('complete');
+      else if (e.data?.type === 'respawn:death') signal('death');
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -77,15 +102,18 @@ export default function App() {
 
   /* ---------- the director ---------- */
   useEffect(() => {
-    let alive = true;
+    let alive = true, runs = 0;
     const sleep = (ms: number) => new Promise<void>((res, rej) => setTimeout(() => (alive ? res() : rej(CANCEL)), ms));
     const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
-    const waitFor = (kind: Signal, timeoutMs?: number) => new Promise<void>((res, rej) => {
-      const done = () => (alive ? res() : rej(CANCEL));
-      if (latched.current.delete(kind)) return done();
-      waiter.current = { kind, resolve: done };
-      if (timeoutMs) setTimeout(() => { if (waiter.current?.kind === kind) { waiter.current = null; done(); } }, timeoutMs);
+    const waitAny = (kinds: Signal[], timeoutMs?: number) => new Promise<Signal>((res, rej) => {
+      const done = (k: Signal) => (alive ? res(k) : rej(CANCEL));
+      const early = kinds.find((k) => latched.current.delete(k));
+      if (early) return done(early);
+      waiter.current = { kinds, resolve: done };
+      if (timeoutMs) setTimeout(() => { if (waiter.current?.kinds === kinds) { waiter.current = null; done(kinds[0]); } }, timeoutMs);
     });
+    const waitFor = (kind: Signal, timeoutMs?: number) => waitAny([kind], timeoutMs);
+    const clear = (...kinds: Signal[]) => kinds.forEach((k) => latched.current.delete(k));
 
     const focusLevel = () => {
       const f = frameRef.current; f?.focus(); f?.contentWindow?.focus();
@@ -112,40 +140,75 @@ export default function App() {
       setIris({ d: IRIS_SHUT, ms: 0, color, ring: false });
     }
 
-    async function playChapter(i: number, first: boolean) {
-      const ch = CHAPTERS[i];
-      latched.current.delete('complete');
+    async function playVideo(src: string, color: string) {
+      clear('videoEnd');
+      setVideo({ src, color, key: Date.now(), fading: false });
+      await waitFor('videoEnd');
+      setVideo((v) => v && { ...v, fading: true });
+      await sleep(480);
+      setVideo(null);
+    }
 
-      if (ch.video && ch.band !== null) {
+    /** One chapter. Returns how it ended. `back` is where a death would send Thanos. */
+    async function playChapter(i: number, first: boolean, respawning: boolean, back: LevelId): Promise<'complete' | 'death'> {
+      const ch = CHAPTERS[i], run = ++runs;
+      clear('complete', 'death');
+
+      if (respawning && ch.band !== null) {
+        // back at a checkpoint: a short RESPAWN card while the level loads behind it
+        setRespawn({ band: ch.band, leaving: false });
+        setLevel({ idx: i, visible: false, run });
+        await sleep(300); sfx.respawn(ch.band);
+        await sleep(2300);
+        setRespawn({ band: ch.band, leaving: true });
+        await sleep(500); setRespawn(null);
+        setLevel({ idx: i, visible: true, run });
+        setBloom({ color: ch.color, key: run });
+        await openOnto(ch.color, 1150);
+      } else if (ch.band !== null) {
         // spectrum card: the new colour ignites
         setCard({ band: ch.band, leaving: false });
         await sleep(500); sfx.ignite(ch.band);
         await sleep(1950);
-        // video, with the level loading (hidden) behind it
-        latched.current.delete('videoEnd');
-        setLevel({ idx: i, visible: false });
-        setVideo({ src: ch.video, color: ch.color, key: i, fading: false });
+        // the torch clip into its letter, with the level loading (hidden) behind it
+        clear('videoEnd');
+        setLevel({ idx: i, visible: false, run });
+        setReveal({ band: ch.band, key: run, fading: false });
         setCard({ band: ch.band, leaving: true });
         await sleep(650); setCard(null);
         await waitFor('videoEnd');
-        setVideo((v) => v && { ...v, fading: true });
+        setReveal((v) => v && { ...v, fading: true });
         await sleep(480);
-        setVideo(null);
-        setLevel({ idx: i, visible: true });
-        setBloom({ color: ch.color, key: i });
+        setReveal(null);
+        setLevel({ idx: i, visible: true, run });
+        setBloom({ color: ch.color, key: run });
         await openOnto(ch.color, 1150);
       } else {
-        setLevel({ idx: i, visible: false });
+        setLevel({ idx: i, visible: false, run });
         await sleep(first ? 700 : 350);   // give the page a moment to paint before the reveal
-        setLevel({ idx: i, visible: true });
+        setLevel({ idx: i, visible: true, run });
         await openOnto(ch.color, first ? 1400 : 1150);
       }
       focusLevel();
 
-      await waitFor('complete');
+      const how = await waitAny(['complete', 'death']);
+      if (how === 'death') {
+        // the level's own Game Over shows for a moment; the shield keeps its retry buttons and keys away
+        setFallen({ back, show: false });
+        await nextFrame();
+        shieldRef.current?.focus();
+        await sleep(1300);
+        setFallen({ back, show: true }); sfx.fallen();
+        await sleep(2900);
+        await closeOn('#FF1E2D');
+        setFallen(null);
+        setLevel(null);
+        await sleep(260);
+        return 'death';
+      }
       // hold on the level's own victory screen; the shield stops clicks reaching its buttons
       continueFrom.current = performance.now() + 1200;
-      latched.current.delete('continue');
+      clear('continue');
       setWon({ hold: ch.hold, color: ch.color });
       await nextFrame();
       shieldRef.current?.focus();
@@ -154,16 +217,64 @@ export default function App() {
       await closeOn(ch.color);
       setLevel(null);
       await sleep(260);
+      return 'complete';
+    }
+
+    /** BnW and the seven colours, with checkpoints, then the finale. */
+    async function run(start: number) {
+      let beaten = beatenBefore(start), respawning = false, first = true;
+      for (let i = start; i < CHAPTERS.length;) {
+        const how = await playChapter(i, first, respawning, respawnAt(beaten));
+        first = false;
+        if (how === 'death') { i = chapterIndex(respawnAt(beaten)); respawning = true; continue; }
+        if (CHECKPOINTS.includes(CHAPTERS[i].id)) beaten = CHAPTERS[i].id;
+        respawning = false; i++;
+      }
+      // Every colour is back: the full strip lights up and rings out…
+      setCard({ band: 6, leaving: false, finale: true });
+      await sleep(400); sfx.spectrumComplete();
+      await sleep(3800);
+      // …then your outro + credits, if it is there
+      if (await videoExists(OUTRO_VIDEO)) {
+        setCard((c) => c && { ...c, leaving: true }); await sleep(600); setCard(null);
+        await playVideo(OUTRO_VIDEO, '#ffffff');
+      }
+      clear('endMenu');
+      setScene('end');
+      setCard(null);
+      await waitFor('endMenu');
     }
 
     (async () => {
-      const start = startChapter();
-      // (1. INTRO and 2. OPENING video will play here, before the first chapter)
-      for (let i = start; i < CHAPTERS.length; i++) await playChapter(i, i === start);
-      // Every colour is back: the full strip lights up and rings out.
-      // (18. ENDING will play from here)
-      setCard({ band: 6, leaving: false, finale: true });
-      await sleep(400); sfx.spectrumComplete();
+      const jump = startChapter();
+      if (jump !== null) { await run(jump); }
+      else {
+        setScene('boot');
+        await waitFor('boot');
+        setScene(null);
+        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff');
+        setScene('logo');
+        await waitFor('logoDone');
+      }
+      for (;;) {
+        music.ensureTheme();
+        clear('start', 'stop');
+        setScene('menu');
+        const pick = await waitAny(['start', 'stop']);
+        if (pick === 'stop') {
+          music.stop(0.8);
+          clear('back'); setScene('stopped');
+          await waitFor('back');
+          continue;
+        }
+        clear('rulesGo'); setScene('rules');
+        await waitFor('rulesGo');
+        music.stop(1.8);
+        setIris({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
+        setScene(null);
+        await sleep(500);
+        await run(0);
+      }
     })().catch((e) => { if (e !== CANCEL) console.error(e); });
 
     return () => { alive = false; waiter.current = null; };
@@ -171,11 +282,12 @@ export default function App() {
 
   const ch = level ? CHAPTERS[level.idx] : null;
   const irisStyle = iris && ({ '--d': iris.d, '--ms': `${iris.ms}ms`, '--c': iris.color } as CSSProperties);
+  const shellScene = scene === 'menu' || scene === 'rules' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
 
   return (
     <div className="stage">
       {ch && (
-        <iframe key={ch.id} ref={frameRef} src={ch.src} title={ch.name} className="level" allow="autoplay; fullscreen"
+        <iframe key={`${ch.id}-${level!.run}`} ref={frameRef} src={ch.src} title={ch.name} className="level" allow="autoplay; fullscreen"
           style={{ visibility: level!.visible ? 'visible' : 'hidden' }} />
       )}
 
@@ -184,16 +296,32 @@ export default function App() {
           <ContinueHint hold={won.hold} color={won.color} />
         </div>
       )}
+      {fallen && (
+        <div ref={shieldRef} tabIndex={-1} className={`shield death${fallen.show ? ' show' : ''}`}>
+          {fallen.show && <FallenOverlay back={fallen.back} />}
+        </div>
+      )}
 
       {iris && <div className={`iris${iris.ring ? ' ring' : ''}`} style={irisStyle!} />}
 
       {video && (
         <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} onEnd={() => signal('videoEnd')} />
       )}
+      {reveal && <LetterReveal key={reveal.key} band={reveal.band} fading={reveal.fading} onEnd={() => signal('videoEnd')} />}
 
       {card && <SpectrumCard band={card.band} leaving={card.leaving} finale={card.finale} />}
+      {respawn && <div className={`respawn-wrap${respawn.leaving ? ' leaving' : ''}`}><RespawnCard band={respawn.band} /></div>}
 
       {bloom && <Bloom key={bloom.key} color={bloom.color} onDone={() => setBloom(null)} />}
+
+      {scene === 'boot' && <BootScreen onGo={() => { audio.get(); signal('boot'); }} />}
+      {scene === 'logo' && <LogoIntro onDone={() => signal('logoDone')} />}
+      {scene === 'menu' && <MainMenu onStart={() => signal('start')} onStop={() => signal('stop')} />}
+      {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
+      {scene === 'stopped' && <StoppedScreen onBack={() => signal('back')} />}
+      {scene === 'end' && <EndScreen onMenu={() => signal('endMenu')} />}
+
+      {crt && shellScene && <div className="crt" aria-hidden />}
     </div>
   );
 }

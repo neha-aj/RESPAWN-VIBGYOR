@@ -26,9 +26,11 @@ const EMPTY = { A: '', B: '', C: '' } as Record<WeightId, string>;
 const NO_OVERLAP: OverlapState = { marked: [], answer: '' };
 const NO_CODE = ['', '', '', ''];
 
-/** onComplete — called once when the final escape succeeds (the victory screen appears). */
-export default function BlueLevel({ previousOrder, onComplete }: { previousOrder: readonly Shape[]; onComplete?: () => void }) {
+/** onComplete — called once when the final escape succeeds (the victory screen appears).
+ *  onDeath    — called once each time the run is lost (time ran out). */
+export default function BlueLevel({ previousOrder, onComplete, onDeath }: { previousOrder: readonly Shape[]; onComplete?: () => void; onDeath?: () => void }) {
   const completeRef = useRef(onComplete); completeRef.current = onComplete;
+  const deathRef = useRef(onDeath); deathRef.current = onDeath;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const portraitRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -111,7 +113,7 @@ export default function BlueLevel({ previousOrder, onComplete }: { previousOrder
   useEffect(() => { if (escaped) completeRef.current?.(); }, [escaped]);
 
   // Time ran out on any level: the run is over and everything from Level 2 on is cleared.
-  useEffect(() => { if (snap?.phase === 'failed') setProgress(restartRun); }, [snap?.phase]);
+  useEffect(() => { if (snap?.phase === 'failed') { setProgress(restartRun); deathRef.current?.(); } }, [snap?.phase]);
 
   // Level 2 finished: store its validated result exactly once (completeLevel2 is idempotent).
   useEffect(() => {

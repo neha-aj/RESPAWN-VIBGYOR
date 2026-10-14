@@ -8,9 +8,10 @@ import { IndigoEngine, type Snapshot } from '../game/engine';
 /**
  * Level INDIGO as one self-contained component, ready to drop into a larger game.
  *   onComplete — called once when Thanos passes through the Indigo Gate
+ *   onDeath    — called once each time the Game Over screen appears
  *   onExit     — called by the Exit button (defaults to a "you can close this tab" screen)
  */
-export default function IndigoLevel({ onComplete, onExit }: { onComplete?: () => void; onExit?: () => void }) {
+export default function IndigoLevel({ onComplete, onDeath, onExit }: { onComplete?: () => void; onDeath?: () => void; onExit?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<IndigoEngine | null>(null);
   const audioRef = useRef<IndigoAudio | null>(null);
@@ -20,6 +21,7 @@ export default function IndigoLevel({ onComplete, onExit }: { onComplete?: () =>
   const [muted, setMuted] = useState(false);
   const [exited, setExited] = useState(false);
   const mutedRef = useRef(false), completeRef = useRef(onComplete); completeRef.current = onComplete;
+  const deathRef = useRef(onDeath); deathRef.current = onDeath;
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   const toggleMute = useCallback(() => { const m = !mutedRef.current; mutedRef.current = m; audio.setMuted(m); setMuted(m); }, [audio]);
@@ -35,6 +37,8 @@ export default function IndigoLevel({ onComplete, onExit }: { onComplete?: () =>
   const click = (fn: () => void) => () => { audio.play('click'); fn(); };
   const exit = () => (onExit ? onExit() : setExited(true));
   const state = snap?.state ?? 'menu';
+  const gameOver = state === 'over';
+  useEffect(() => { if (gameOver) deathRef.current?.(); }, [gameOver]);
   const tl = snap?.timeLeft ?? 0;
 
   return (

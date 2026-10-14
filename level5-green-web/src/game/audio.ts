@@ -32,6 +32,14 @@ export class GreenAudio {
       this.buf.set('heart', mk(0.55, (t) => sin(TAU * 52 * t) * (ex(-t * 26) + (t > 0.22 ? ex(-(t - 0.22) * 22) * 0.75 : 0)) * 1.1));
       this.buf.set('whisper', mk(1.3, (t) => soft(nz(), 0.4) * (0.5 + 0.5 * sin(TAU * 7 * t)) * sin((Math.PI * t) / 1.3) * 0.9));
       this.buf.set('click', mk(0.06, (t) => sin(TAU * 1500 * t) * ex(-t * 70) * 0.4));
+      // ambient jumpscares: a tearing shriek (detuned saws diving in pitch over noise and a sub hit), VHS static, a rising string sting
+      this.buf.set('shriek', mk(1.5, (t) => {
+        const f = 1900 * ex(-t * 1.3) + 520, saw = (k: number) => (((t * f * k) % 1) - 0.5);
+        const scream = (saw(1) + saw(1.013) + saw(1.5021) * 0.6) * (0.7 + 0.3 * sin(TAU * 31 * t));
+        return (scream * 0.8 + nz() * 0.6 * ex(-t * 2.2) + sin(TAU * 44 * t) * ex(-t * 6) * 1.4) * Math.min(1, t * 90) * ex(-t * 1.7);
+      }));
+      this.buf.set('static', mk(1.0, (t) => (nz() * (rnd() < 0.08 ? 1 : 0.45) * (0.6 + 0.4 * sin(TAU * 60 * t))) * Math.min(1, t * 40) * ex(-t * 1.5)));
+      this.buf.set('sting', mk(1.3, (t) => [880, 932.3, 1244.5, 1318.5].reduce((s, f, k) => s + sin(TAU * f * (1 + 0.25 * t) * t + k) * 0.22, 0) * Math.min(1, t * 2.5) * (t > 0.95 ? ex(-(t - 0.95) * 12) : 1)));
       this.buf.set('over', mk(2.2, (t) => (sin(TAU * (110 - 40 * t) * t) + 0.6 * sin(TAU * (116 - 44 * t) * t)) * ex(-t * 1.2) * 0.5));
       this.musicBuf = this.makeMusic(rnd);
       this.apply();

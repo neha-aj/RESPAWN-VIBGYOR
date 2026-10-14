@@ -7,9 +7,10 @@ import { YellowEngine, type Snapshot } from '../game/engine';
  * Level YELLOW as one self-contained component, ready to drop into a larger game.
  * Every screen (title, rules, HUD, pause, results) is drawn on the canvas.
  *   onComplete — called once when Thanos walks through the Phase Door
+ *   onDeath    — called once each time the Game Over screen appears
  *   onExit     — called by the Exit button (defaults to a "you can close this tab" screen)
  */
-export default function YellowLevel({ onComplete, onExit }: { onComplete?: () => void; onExit?: () => void }) {
+export default function YellowLevel({ onComplete, onDeath, onExit }: { onComplete?: () => void; onDeath?: () => void; onExit?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<YellowAudio | null>(null);
   if (!audioRef.current) audioRef.current = new YellowAudio();
@@ -17,6 +18,7 @@ export default function YellowLevel({ onComplete, onExit }: { onComplete?: () =>
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [exited, setExited] = useState(false);
   const completeRef = useRef(onComplete); completeRef.current = onComplete;
+  const deathRef = useRef(onDeath); deathRef.current = onDeath;
   const exitRef = useRef(onExit); exitRef.current = onExit;
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
@@ -27,6 +29,8 @@ export default function YellowLevel({ onComplete, onExit }: { onComplete?: () =>
     return () => { e.destroy(); audio.destroy(); };
   }, [audio, toggleMute]);
   useEffect(() => { if (snap?.won) completeRef.current?.(); }, [snap?.won]);
+  const gameOver = snap?.state === 'GAME_OVER';
+  useEffect(() => { if (gameOver) deathRef.current?.(); }, [gameOver]);
 
   return (
     <div className="flex h-full w-full items-center justify-center bg-ylw-ink">

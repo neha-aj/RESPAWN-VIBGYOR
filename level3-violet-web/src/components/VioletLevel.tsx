@@ -8,9 +8,10 @@ import { VioletEngine, type Snapshot } from '../game/engine';
 /**
  * Level VIOLET as one self-contained component, ready to drop into a larger game.
  *   onComplete — called once when the Phase Door is struck (victory)
+ *   onDeath    — called once each time the Game Over screen appears
  *   onExit     — called by the Exit button (defaults to a "you can close this tab" screen)
  */
-export default function VioletLevel({ onComplete, onExit }: { onComplete?: () => void; onExit?: () => void }) {
+export default function VioletLevel({ onComplete, onDeath, onExit }: { onComplete?: () => void; onDeath?: () => void; onExit?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<VioletEngine | null>(null);
   const audioRef = useRef<VioletAudio | null>(null);
@@ -21,6 +22,7 @@ export default function VioletLevel({ onComplete, onExit }: { onComplete?: () =>
   const [exited, setExited] = useState(false);
   const mutedRef = useRef(false);
   const completeRef = useRef(onComplete); completeRef.current = onComplete;
+  const deathRef = useRef(onDeath); deathRef.current = onDeath;
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   const toggleMute = useCallback(() => {
@@ -40,6 +42,8 @@ export default function VioletLevel({ onComplete, onExit }: { onComplete?: () =>
   const eng = () => engineRef.current;
   const click = (fn: () => void) => () => { audio.play('click'); fn(); };
   const state = snap?.state ?? 'menu';
+  const gameOver = state === 'over';
+  useEffect(() => { if (gameOver) deathRef.current?.(); }, [gameOver]);
 
   return (
     <div className="flex h-full w-full items-center justify-center bg-vio-bg">

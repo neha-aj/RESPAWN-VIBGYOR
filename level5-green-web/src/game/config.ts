@@ -11,6 +11,8 @@ export const SEARCH_TIME = 3.5;
 export const LIGHT_RANGE = 330, LIGHT_HALF = (32 * Math.PI) / 180;
 export const AMBIENT_R = 105;
 export const JUMPSCARE_FRAMES = 60;
+/** Ambient jumpscares (no life lost): the first one this many seconds into play, then one every SCARE_GAP seconds. */
+export const SCARE_FIRST: [number, number] = [45, 65], SCARE_GAP: [number, number] = [70, 110];
 export const SPAWN_PROTECT = 1.2;
 export const RITUAL_TIME = 3.0, DOOR_PHASE = 1.6;
 

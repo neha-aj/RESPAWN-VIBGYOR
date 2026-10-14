@@ -1,0 +1,170 @@
+/* =====================================================================================
+ * Intro, menu and checkpoint screens (all above the iris)
+ *   .logo-layer / .reveal-layer   canvas cutscenes (logo reveal, torch clip into a letter)
+ *   .menu-layer, .rules-card, .boot, .respawn-wrap   full-screen shell scenes
+ *   .shield.death + .fallen        over a lost level
+ *   .crt                           scanlines over the shell's own scenes (a setting)
+ * ===================================================================================== */
+.logo-layer { position: absolute; inset: 0; z-index: 35; background: #000; }
+.logo-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.reveal-layer { z-index: 30; }
+.press-any {
+  position: absolute; left: 50%; bottom: 1.4vh; transform: translateX(-50%);
+  font-size: clamp(8px, 0.8vw, 11px); letter-spacing: 0.3em; color: #fff; text-shadow: 0 0 10px #fff8;
+  animation: blink 1.1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.blink { animation: blink 1.1s steps(1) infinite; }
+
+.crt {
+  position: absolute; inset: 0; z-index: 90; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+  box-shadow: inset 0 0 18vmin rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- RESPAWN title: one colour per letter ---------- */
+.title { display: flex; gap: 0.16em; margin: 0; font-size: clamp(36px, 7vw, 104px); font-weight: 400; letter-spacing: 0.04em; }
+.title.small { font-size: clamp(18px, 2.6vw, 34px); }
+.title > span {
+  display: inline-block; color: #fff;
+  text-shadow: 3px 3px 0 var(--c), 0 0 22px color-mix(in srgb, var(--c) 70%, transparent);
+  animation: bob 2.4s ease-in-out calc(var(--i) * -0.18s) infinite;
+}
+@keyframes bob { 50% { transform: translateY(-0.08em); } }
+
+/* ---------- boot / stopped / end ---------- */
+.boot {
+  position: absolute; inset: 0; z-index: 45; background: #000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh; text-align: center; padding: 16px;
+}
+.boot .blink { font-size: clamp(12px, 1.6vw, 20px); letter-spacing: 0.25em; margin: 0; }
+.boot-note { font-size: clamp(8px, 0.8vw, 11px); letter-spacing: 0.25em; color: #888; margin: 0; }
+.boot-title { font-size: clamp(14px, 2vw, 26px); letter-spacing: 0.2em; margin: 0; }
+.pix-btn {
+  font: inherit; font-size: clamp(10px, 1vw, 14px); letter-spacing: 0.2em; color: #fff; background: #000; padding: 14px 22px; cursor: pointer;
+  border: 3px solid #fff; box-shadow: 4px 4px 0 #9B30FF, 8px 8px 0 #FF1E2D;
+}
+.pix-btn:hover, .pix-btn:focus-visible { background: #fff; color: #000; outline: none; }
+
+/* ---------- main menu ---------- */
+.menu-layer { position: absolute; inset: 0; z-index: 35; background: #000; overflow: hidden; animation: fade-in 700ms ease-out both; }
+.menu-bg {
+  position: absolute; inset: -4%; background-size: cover; background-position: center; image-rendering: pixelated;
+  filter: brightness(0.32) saturate(1.15); animation: pan 40s ease-in-out infinite alternate;
+}
+@keyframes pan { from { transform: scale(1.04) translateX(-1.5%); } to { transform: scale(1.1) translateX(1.5%); } }
+.menu-embers i {
+  position: absolute; bottom: -10px; left: var(--x); width: 4px; height: 4px; background: var(--c); box-shadow: 0 0 8px var(--c);
+  animation: ember var(--d) linear var(--delay) infinite;
+}
+@keyframes ember { from { transform: translateY(0); opacity: 0.9; } to { transform: translateY(-105vh) translateX(30px); opacity: 0; } }
+.menu-wrap {
+  position: relative; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto 1fr;
+  gap: 3vh 4vw; padding: 6vh 5vw 8vh;
+}
+.menu-head { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1.6vh; }
+.tagline { margin: 0; font-size: clamp(8px, 0.9vw, 12px); letter-spacing: 0.5em; color: #bbb; }
+.menu-body { align-self: center; min-width: 0; }
+.menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2.2vh; }
+.mi {
+  display: flex; align-items: center; gap: 14px; cursor: pointer; font-size: clamp(12px, 1.5vw, 20px); letter-spacing: 0.18em; color: #9a9a9a;
+  transition: color 120ms, transform 120ms;
+}
+.mi .cursor { visibility: hidden; color: #fff; font-size: 0.8em; }
+.mi.on { color: #fff; transform: translateX(6px); text-shadow: 3px 3px 0 #9B30FF; }
+.mi.on .cursor { visibility: visible; animation: blink 0.8s steps(1) infinite; }
+.mi.start.on { color: #39FF14; text-shadow: 3px 3px 0 #0b5c00, 0 0 16px #39FF1488; }
+.mi.stop.on { color: #FF1E2D; text-shadow: 3px 3px 0 #5c0008; }
+.panel { background: rgba(0, 0, 0, 0.72); border: 3px solid #fff; box-shadow: 6px 6px 0 #6A4BFF; padding: 22px 24px; max-height: 64vh; overflow: auto; }
+.panel h2, .rules-card h2, .menu-road h2 { margin: 0 0 18px; font-size: clamp(11px, 1.2vw, 16px); font-weight: 400; letter-spacing: 0.3em; }
+.menu-list.settings { gap: 1.6vh; }
+.menu-list.settings .mi { font-size: clamp(9px, 1vw, 13px); }
+.lbl { min-width: 15em; }
+.val { color: #FFD400; }
+.vbar { display: inline-flex; gap: 3px; }
+.vbar i { width: 10px; height: 14px; background: #333; border: 1px solid #555; }
+.vbar i.f { background: #39FF14; border-color: #39FF14; box-shadow: 0 0 6px #39FF1488; }
+.panel-note { margin: 18px 0 0; font-size: 9px; line-height: 1.8; color: #aaa; letter-spacing: 0.08em; }
+.panel.how .menu-list { margin-top: 16px; }
+.panel.how > .rules-note { margin-bottom: 14px; }
+.menu-road { align-self: center; min-width: 0; pointer-events: none; user-select: none; }
+.menu-wrap.wide .menu-body { grid-column: 1 / -1; }
+.menu-wrap.wide .menu-road { display: none; }
+.panel.how { max-width: 1000px; }
+.panel.how .rules-list li { font-size: clamp(9px, 1vw, 13px); }
+.menu-hint { position: absolute; left: 0; right: 0; bottom: 2.6vh; text-align: center; font-size: 9px; letter-spacing: 0.25em; color: #888; }
+
+/* ---------- roadmap (a picture only: nothing on it can be chosen) ---------- */
+.roadmap { pointer-events: none; }
+.road { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; padding-top: 4px; }
+.road::before {
+  content: ""; position: absolute; left: 3%; right: 3%; bottom: 25px; height: 0; border-top: 3px dashed rgba(255, 255, 255, 0.35);
+}
+.node { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; animation: rise-in 500ms ease-out calc(var(--i, 0) * 90ms + 200ms) forwards; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.node.bnw { animation-delay: 150ms; }
+.flag-slot { height: 22px; display: flex; align-items: flex-end; }
+.flag { width: 16px; height: 20px; animation: wave 1.2s steps(2) infinite; }
+@keyframes wave { 50% { transform: skewY(-6deg); } }
+.here { font-size: 7px; letter-spacing: 0.1em; color: #000; background: #fff; padding: 3px 4px; animation: blink 1s steps(1) infinite; }
+.thumb {
+  display: block; flex: none; background-color: #111; background-repeat: no-repeat; image-rendering: pixelated;
+  border: 2px solid var(--c); box-shadow: 3px 3px 0 #000, 0 0 12px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.node.cp .thumb { border-width: 3px; box-shadow: 3px 3px 0 #000, 0 0 18px color-mix(in srgb, var(--c) 80%, transparent); }
+.bnw-thumb, .end-thumb { width: 40px; height: 104px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: repeating-conic-gradient(#222 0 25%, #000 0 50%) 0 0 / 10px 10px; }
+.roadmap.compact .bnw-thumb, .roadmap.compact .end-thumb { width: 30px; height: 78px; font-size: 16px; }
+.end-thumb { background: #000; color: #FFD400; }
+.node-letter { position: relative; z-index: 1; font-size: 11px; color: var(--c); text-shadow: 0 0 8px var(--c); background: #000; padding: 4px 3px; }
+.legend { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-top: 12px; font-size: 8px; letter-spacing: 0.2em; color: #aaa; }
+.legend .flag { width: 10px; height: 13px; animation: none; }
+
+/* ---------- checkpoint rules ---------- */
+.rules { display: flex; flex-direction: column; gap: 12px; }
+.rules-lead { margin: 0; font-size: clamp(9px, 1vw, 13px); letter-spacing: 0.15em; line-height: 1.6; }
+.rules-lead b { font-weight: 400; text-shadow: 0 0 8px currentColor; }
+.rules-note { margin: 0; font-size: 9px; line-height: 1.9; color: #bbb; letter-spacing: 0.06em; }
+.rules-note b { color: #fff; font-weight: 400; }
+.rules-list { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rules-list li { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: clamp(8px, 0.85vw, 11px); letter-spacing: 0.08em; }
+.rules-list .die { color: #ddd; }
+.rules-list .arrow { color: #888; }
+.rules-list .back { text-shadow: 0 0 8px currentColor; }
+
+.rules-card {
+  position: absolute; inset: 0; z-index: 40; background: #000; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: center; gap: 4vh; padding: 6vh max(16px, 14vw);
+  animation: fade-in 400ms ease-out both;
+}
+.rules-card h2 { text-align: center; font-size: clamp(14px, 2vw, 24px); }
+.rules-card .rules { max-width: 860px; width: 100%; margin: 0 auto; }
+.rules-card .roadmap { max-width: 760px; width: 100%; margin: 0 auto; }
+.rules-card .press { text-align: center; margin: 0; font-size: clamp(10px, 1.1vw, 14px); letter-spacing: 0.25em; min-height: 1em; }
+
+/* ---------- death: fallen, then respawn ---------- */
+.shield.death { cursor: default; background: rgba(0, 0, 0, 0); transition: background 800ms ease; }
+.shield.death.show { background: rgba(20, 0, 4, 0.72); }
+.fallen {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh; text-align: center; padding: 16px;
+  animation: fade-in 500ms ease-out both;
+}
+.fallen-title {
+  margin: 0; font-size: clamp(18px, 3.4vw, 44px); letter-spacing: 0.14em; color: #FF1E2D;
+  text-shadow: 4px 4px 0 #3a0006, 0 0 26px #ff1e2daa; animation: shudder 160ms steps(2) 4;
+}
+@keyframes shudder { 50% { transform: translate(4px, -2px); } }
+.fallen-sub { margin: 0; font-size: clamp(9px, 1.1vw, 14px); letter-spacing: 0.25em; color: #ddd; }
+.fallen-sub b { font-weight: 400; color: var(--c); text-shadow: 0 0 10px var(--c); }
+
+.respawn-wrap { position: absolute; inset: 0; z-index: 40; background: #000; animation: fade-in 300ms ease-out both; transition: opacity 480ms ease-in; }
+.respawn-wrap.leaving { opacity: 0; }
+.respawn-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3.5vh; }
+.respawn-card .thumb { animation: materialise 1.4s steps(8) both; }
+@keyframes materialise { from { filter: brightness(4) contrast(0.2); clip-path: inset(50% 0 50% 0); } to { filter: none; clip-path: inset(0); } }
+.respawn-word { margin: 0; font-size: clamp(20px, 3.6vw, 46px); letter-spacing: 0.3em; color: #fff; text-shadow: 3px 3px 0 var(--c), 0 0 24px var(--c); animation: letter-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 700ms both; }
+.respawn-sub { margin: 0; font-size: clamp(9px, 1vw, 13px); letter-spacing: 0.3em; color: var(--c); animation: fade-in 500ms ease-out 1100ms both; }
+
+@media (max-width: 900px) {
+  .menu-wrap { grid-template-columns: 1fr; grid-template-rows: auto auto auto; overflow: auto; }
+  .menu-road { display: none; }
+}

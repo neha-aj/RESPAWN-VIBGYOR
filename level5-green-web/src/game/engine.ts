@@ -2,6 +2,7 @@
 import type { GreenAudio } from './audio';
 import { H, TIME_LIMIT, W } from './config';
 import { FONT, Renderer } from './render';
+import { Scares } from './scares';
 import { GreenGame, type State } from './sim';
 
 export interface Snapshot { state: State; cause: string; lives: number; runes: number; timeLeft: number; won: boolean }
@@ -11,10 +12,12 @@ export class GreenEngine {
   readonly game: GreenGame;
   private r: Renderer; private raf = 0; private last = 0; private acc = 0; private sig = '';
   private mouse: { x: number; y: number } | null = null;
+  private scares: Scares;
   constructor(private canvas: HTMLCanvasElement, private audio: GreenAudio, private onChange: (s: Snapshot) => void, private onMute: () => void) {
     canvas.width = W; canvas.height = H;
     this.game = new GreenGame((s, v) => audio.play(s, v));
     this.r = new Renderer(canvas.getContext('2d')!);
+    this.scares = new Scares((s, v) => audio.play(s, v));
     void document.fonts?.load(`16px ${FONT}`).then(() => this.r.clearTextCache());
     window.addEventListener('keydown', this.onKey, true); window.addEventListener('keyup', this.onKey, true); window.addEventListener('blur', this.onBlur);
     canvas.addEventListener('mousemove', this.onMouse);
@@ -60,12 +63,14 @@ export class GreenEngine {
   frame = (now: number) => {
     const dt = this.last ? Math.min(0.25, (now - this.last) / 1000) : 0; this.last = now;
     this.aim();
-    if (this.game.state !== 'PAUSED') {
+    const scaring = this.scares.update(dt, this.game);   // the world holds still while a scare is on screen
+    if (this.game.state !== 'PAUSED' && !scaring) {
       this.acc += dt; let n = 0;
       while (this.acc >= STEP && n < 8) { this.game.step(STEP); this.acc -= STEP; n++; }
       if (n === 8) this.acc = 0;
     }
     this.r.draw(this.game);
+    this.scares.draw(this.canvas.getContext('2d')!);
     this.emit(false);
     this.raf = requestAnimationFrame(this.frame);
   };

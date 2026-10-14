@@ -6,7 +6,7 @@ import {
 import { ForestMaze, sameCell, V, type Cell } from './maze';
 
 export type State = 'TITLE' | 'RULES' | 'PLAYING' | 'PAUSED' | 'JUMPSCARE' | 'GAME_OVER' | 'VICTORY';
-export type Sound = 'step' | 'ring' | 'rune' | 'seal' | 'energy' | 'door' | 'warp' | 'scare' | 'heart' | 'whisper' | 'click' | 'over';
+export type Sound = 'step' | 'ring' | 'rune' | 'seal' | 'energy' | 'door' | 'warp' | 'scare' | 'heart' | 'whisper' | 'click' | 'over' | 'shriek' | 'static' | 'sting';
 export type Mood = 'calm' | 'wary' | 'strain' | 'fear' | 'smug' | 'resolve' | 'triumph';
 export interface Controls { up: boolean; down: boolean; left: boolean; right: boolean; sprint: boolean }
 

@@ -1,12 +1,12 @@
 /* The running order of the full game.
  *
- * Each chapter is: [optional colour video] → level. Between chapters the shell plays its
- * transitions (victory hold → iris close → spectrum card → video → colour bloom → iris open).
+ *   [boot: press any key] → INTRO video (videos/intro.mp4, when you add it) → logo reveal
+ *   (Thanos's torch finds V I B G Y O R) → main menu → rules card → BnW → for each colour:
+ *   spectrum card → torch clip into its letter → the level … → after RED: the strip lights up
+ *   → OUTRO + credits video (videos/outro.mp4, when you add it) → back to the menu.
  *
- * Slots still to come (do not exist yet, add them here when they arrive):
- *   1. INTRO   — VIBGYOR photo with its own tune, before everything else
- *   2. OPENING — the game's mp4 video, after the intro and before BnW
- *  18. ENDING  — the ending sequence, after RED (see `finale` in App.tsx)
+ * Between chapters the shell plays its transitions (victory hold → iris close → spectrum card →
+ * letter clip → colour bloom → iris open). Checkpoints are below.
  */
 
 export type LevelId = 'bnw' | 'violet' | 'indigo' | 'blue' | 'green' | 'yellow' | 'orange' | 'red';
@@ -20,8 +20,6 @@ export interface Chapter {
   color: string;
   /** Index in the spectrum strip (0 = V … 6 = R); null for BnW. */
   band: number | null;
-  /** Colour video played before the level, if any. */
-  video?: string;
   /** How long to hold on the level's own victory screen before moving on (ms). */
   hold: number;
 }
@@ -38,11 +36,10 @@ export const SPECTRUM = [
 ] as const;
 
 const band = (i: number, id: LevelId, src: string, hold = 5200): Chapter => ({
-  id, name: SPECTRUM[i].name, src, color: SPECTRUM[i].color, band: i, video: `videos/${SPECTRUM[i].letter}.mp4`, hold,
+  id, name: SPECTRUM[i].name, src, color: SPECTRUM[i].color, band: i, hold,
 });
 
 export const CHAPTERS: Chapter[] = [
-  // (1. INTRO and 2. OPENING video go before this, when they arrive)
   { id: 'bnw', name: 'BnW', src: 'bnw.html', color: '#FFFFFF', band: null, hold: 5200 },
   band(0, 'violet', 'levels/violet/index.html'),
   band(1, 'indigo', 'levels/indigo/index.html'),
@@ -52,12 +49,46 @@ export const CHAPTERS: Chapter[] = [
   band(5, 'orange', 'levels/orange/index.html'),
   // RED types out its own closing cards after the win (~10 s), so it holds longer.
   band(6, 'red', 'levels/red/index.html', 12000),
-  // (18. ENDING goes after this, when it arrives)
 ];
 
-/** `?chapter=green` starts the run at that chapter (handy for testing and demos). */
-export function startChapter(): number {
+/** Your videos: drop these files into public/videos/ and they play in their slots (skipped while missing). */
+export const INTRO_VIDEO = 'videos/intro.mp4';
+export const OUTRO_VIDEO = 'videos/outro.mp4';
+
+/*
+ * CHECKPOINTS: BLUE, GREEN and RED. A checkpoint counts once that level is BEATEN; dying
+ * (a level's Game Over screen; in RED, which has no lives, 10 deaths) sends Thanos back to the
+ * last checkpoint beaten, or to VIOLET before the first one:
+ *   die in VIOLET, INDIGO or BLUE  → VIOLET
+ *   die in GREEN                   → BLUE   (BLUE beaten)
+ *   die in YELLOW, ORANGE or RED   → GREEN  (GREEN beaten)
+ * BnW comes before all of this and keeps its own retries.
+ */
+export const CHECKPOINTS: LevelId[] = ['blue', 'green', 'red'];
+export const FIRST_COLOUR: LevelId = 'violet';
+export const RED_DEATHS = 10;
+export const chapterIndex = (id: LevelId) => CHAPTERS.findIndex((c) => c.id === id);
+
+/** Where a death sends Thanos, given the last checkpoint beaten (null: none yet). */
+export const respawnAt = (beaten: LevelId | null): LevelId => beaten ?? FIRST_COLOUR;
+
+/** The last checkpoint beaten before chapter i (used when a run starts mid-way with ?chapter=). */
+export function beatenBefore(i: number): LevelId | null {
+  let last: LevelId | null = null;
+  CHAPTERS.forEach((c, j) => { if (j < i && CHECKPOINTS.includes(c.id)) last = c.id; });
+  return last;
+}
+
+/** The rules, as shown on the menu and the card before BnW. */
+export const CHECKPOINT_RULES: { die: string; back: string; color: string }[] = [
+  { die: 'VIOLET · INDIGO · BLUE', back: 'VIOLET', color: SPECTRUM[0].color },
+  { die: 'GREEN', back: 'BLUE', color: SPECTRUM[2].color },
+  { die: 'YELLOW · ORANGE · RED', back: 'GREEN', color: SPECTRUM[3].color },
+];
+
+/** `?chapter=green` starts the run at that chapter, skipping the intro and menu (handy for testing and demos). */
+export function startChapter(): number | null {
   const id = new URLSearchParams(window.location.search).get('chapter');
   const i = CHAPTERS.findIndex((c) => c.id === id);
-  return i < 0 ? 0 : i;
+  return i < 0 ? null : i;
 }

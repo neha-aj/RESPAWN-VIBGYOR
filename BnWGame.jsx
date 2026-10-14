@@ -19,7 +19,8 @@ const FONT_URL = 'https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&fa
    step (mate in 4), and White's replies are forced (only 3.Kf1 deviates,
    which loses at once to …Qf2#).
    FEN: r5k1/pp3p1p/1q3QpB/8/8/P2n1P2/1P4PP/3R3K b - - 0 1
-   Wrong moves are punished at runtime: if White has a mate in one, it is played.
+   Any line that forces mate in 4 is accepted (see blackMates/defence); the player
+   always gets all 4 moves and is told at the end if the line was not forced.
    --------------------------------------------------------------------------- */
 export const LEVEL_1 = {
   number: 1,
@@ -30,7 +31,7 @@ export const LEVEL_1 = {
   ],
   openingMove: 'Qf6',
   threatName: 'Qg7#',
-  intro: 'White threatens Qg7#, and nothing can defend g7. Strike first. Black to move.',
+  intro: 'White threatens Qg7#, and nothing can defend g7. Strike first. Black to move: checkmate in 4 moves.',
   threat: ['f6', 'g7'],
   solution: [
     { b: 'd3f2', ann: '!', w: 'h1g1', say: '…Nf2+! The knight checks first, so White never gets time for Qg7#.', reply: ' Forced: Kg1.' },
@@ -59,7 +60,7 @@ export const LEVEL_2 = {
   ],
   openingMove: 'Ne8',
   threatName: 'Nf6#',
-  intro: 'The white knight hides a rook behind it. If it jumps, it is double check and mate (Nf6#). Strike first. Black to move.',
+  intro: 'The white knight hides a rook behind it. If it jumps, it is double check and mate (Nf6#). Strike first. Black to move: checkmate in 3 moves.',
   threat: ['e8', 'f6'],
   solution: [
     { b: 'f4e2', ann: '!', w: 'g1h1', say: '…Ne2+! The knight checks and seals g1 and g3.', reply: ' Forced: Kh1.' },
@@ -78,9 +79,10 @@ export const LEVELS = [LEVEL_1, LEVEL_2];
 
 const RULES = [
   'You play as BLACK. You are Thanos.',
-  'White is threatening checkmate. Find the precise sequence of moves that turns the tables.',
+  'White is threatening checkmate. Each board tells you how many moves you have: Level 1 is checkmate in 4 moves, Level 2 is checkmate in 3 moves. That is the shortest win.',
+  'Any line that forces checkmate in that many moves counts, not just one answer.',
   'Each level starts with a 2-minute countdown. If the timer hits 0:00, Thanos is sent back to the start of the level.',
-  'A wrong move shows why it fails and resets the board. The timer keeps running.',
+  'You always get to play all your moves. If they do not force checkmate in that many moves, you are told where the line went wrong and the board resets. The timer keeps running.',
   'Click a black piece to highlight it, then click a highlighted square. You can also drag pieces.',
   'Completing Level 1 unlocks Level 2. Completing Level 2 triggers the victory screen.',
   'Press M to toggle sound.',
@@ -138,6 +140,41 @@ function san(b, m) {
   return s;
 }
 const moveOf = (key) => ({ from: sqi(key.slice(0, 2)), to: sqi(key.slice(2, 4)) });
+const isMate = (b, c) => inCheck(b, c) && legal(b, c).length === 0;
+
+/* ---------- forced-mate search (Black mates) ----------
+   Any line that FORCES mate in the level's number of moves is a valid answer,
+   not just the scripted one. White defends with every legal reply, mating
+   Black included, so a quiet move that allows White's mate is not forced. */
+const boardKey = (b) => b.map((p) => (p ? (p.c === 'w' ? p.t : p.t.toLowerCase()) : '.')).join('');
+const MEMO = new Map();
+// Black to move: can Black force mate within n moves?
+function blackMates(b, n) {
+  const k = 'b' + n + boardKey(b);
+  if (MEMO.has(k)) return MEMO.get(k);
+  let ok = false;
+  const ms = legal(b, 'b').map((m) => ({ m, nb: applyB(b, m) })).map((x) => ({ ...x, chk: inCheck(x.nb, 'w') }));
+  ms.sort((x, y) => y.chk - x.chk);                               // checks first
+  for (const { nb, chk } of ms) {
+    if (chk && legal(nb, 'w').length === 0) { ok = true; break; }
+    if (n > 1 && defence(nb, n - 1) === null) { ok = true; break; }
+  }
+  MEMO.set(k, ok); return ok;
+}
+// White to move: a reply that escapes mate within n Black moves, or null if every reply loses.
+function defence(b, n) {
+  const k = 'w' + n + boardKey(b);
+  if (MEMO.has(k)) return MEMO.get(k);
+  const wl = legal(b, 'w');
+  let res = null;
+  if (!wl.length) res = 'stalemate';
+  else {
+    const rs = wl.map((m) => ({ m, nb: applyB(b, m) })).map((x) => ({ ...x, mate: isMate(x.nb, 'b') }));
+    rs.sort((x, y) => y.mate - x.mate || (b[y.m.to] ? 1 : 0) - (b[x.m.to] ? 1 : 0));   // mates, then captures
+    for (const { m, nb, mate } of rs) if (mate || !blackMates(nb, n)) { res = m; break; }
+  }
+  MEMO.set(k, res); return res;
+}
 
 /* =============================================================================
    AUDIO (fully synthesised, no files)
@@ -606,12 +643,7 @@ function createEngine(canvas, cb, opts) {
   }
   syncSprites(true);
 
-  const targets = (from) => {
-    const list = legalB.filter((m) => m.from === from).map((m) => m.to);
-    const sol = LV.solution[step];
-    if (sol && mode === 'play') { const sm = moveOf(sol.b); if (sm.from === from && !list.includes(sm.to)) list.push(sm.to); }
-    return list;
-  };
+  const targets = (from) => legalB.filter((m) => m.from === from).map((m) => m.to);
 
   function launch(s, dir) { s.flying = true; s.hop = null; s.drag = false; s.vx = (dir >= 0 ? 1 : -1) * (220 + Math.random() * 220); s.vy = -650 - Math.random() * 300; s.av = (Math.random() - 0.5) * 12; s.life = 2.6; }
   function puff(x, y) { for (let i = 0; i < 9; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 60, grav: 160, drag: 0.96, life: 0.5, max: 0.5, col: '#e8e8e8', size: 2 + Math.random() * 2, a: 0.5 }); }
@@ -627,60 +659,90 @@ function createEngine(canvas, cb, opts) {
     else { const d = Math.hypot(to.x - s.x, to.y - s.y) / SQ; s.hop = { x0: s.x, y0: s.y, x1: to.x, y1: to.y, t: 0, dur: 0.3 + 0.06 * d, h: 24 + 9 * d, cb: land }; sound.lift(); }
   }
 
-  /* ----- rules ----- */
+  /* ----- rules -----
+     The board is "checkmate in X" (X = the solution's length, the shortest win).
+     The player always gets all X moves. Every Black move is checked against the
+     real game tree: the line counts only if it still FORCES mate in the moves left.
+     Nothing is revealed until the attempt ends (mate, or X moves played). */
   const VAL = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
-  // White's punishment for a wrong move: mate in one if it exists, otherwise
-  // escape a check, otherwise the most valuable capture, otherwise any move.
-  function punishment() {
-    const wl = legal(board, 'w'); if (!wl.length) return null;
-    for (const m of wl) { const nb = applyB(board, m); if (inCheck(nb, 'b') && legal(nb, 'b').length === 0) return { m, mate: true }; }
-    if (inCheck(board, 'w')) return { m: wl.find((x) => board[x.from].t === 'K') || wl[0], escape: true };
-    let best = null, bv = -1;
-    for (const m of wl) { const v = board[m.to] ? VAL[board[m.to].t] : -1; if (v > bv) { bv = v; best = m; } }
-    return { m: best || wl[0] };
+  let line = null;   // the attempt so far: { bad: first move that let the mate slip, or null; keys: Black moves played }
+  const mateMoves = () => LV.solution.length;
+
+  // White never ends the attempt early (it does not deliver mate, so the player gets all X moves).
+  // While Black's line is still forced, White picks the longest defence (the scripted reply on a tie);
+  // once it is not, White just avoids handing Black a mate.
+  function whiteReply(left) {
+    const wl = legal(board, 'w'), safe = wl.filter((m) => !isMate(applyB(board, m), 'b')), pool = safe.length ? safe : wl;
+    const sol = LV.solution[step - 1], scripted = sol && sol.w && line.keys.every((k, i) => k === LV.solution[i].b) ? sol.w : null;
+    let best = null, score = -Infinity;
+    for (const m of pool) {
+      const nb = applyB(board, m);
+      let sc;
+      if (!line.bad) { let d = 1; while (d < left && !blackMates(nb, d)) d++; sc = d * 10; }
+      else sc = (blackMates(nb, 1) ? 0 : 100) + (board[m.to] ? VAL[board[m.to].t] : 0);
+      if (scripted && sqn(m.from) + sqn(m.to) === scripted) sc += 0.5;
+      if (sc > score) { score = sc; best = m; }
+    }
+    return best;
   }
 
   function playerMove(from, to, dragged) {
     if (!targets(from).includes(to)) return;
-    const m = { from, to }, key = sqn(from) + sqn(to), s = san(board, m), no = step + 1;
+    const m = { from, to }, key = sqn(from) + sqn(to), s = san(board, m), no = step + 1, X = mateMoves();
+    const left = X - no;                       // Black moves still to come after this one
+    const nb = applyB(board, m), mate = isMate(nb, 'w');
+    if (!line.bad && !mate) {
+      const d = left > 0 ? defence(nb, left) : 'none';
+      if (d !== null) line.bad = { idx: step, key, s, refute: d && typeof d === 'object' ? d : null };
+    }
+    if (line.bad && line.bad.refute && line.bad.idx === step) line.bad.ws = san(nb, line.bad.refute);
     selected = -1; locked = true;
     doMove(m, dragged);
-    const sol = LV.solution[step];
-    if (key === sol.b) {
-      moves.push({ n: no + '…', s: s + sol.ann, c: 'b' });
-      setMsg('good', sol.say);
-      rings.push({ ...sqXY(m.to), t: 0 }); sound.good(Math.min(step, 2)); say('smug', 1.8);
-      setStep(step + 1);
-      if (step === LV.solution.length) { win(); return; }
-      later(1.0, () => {
-        const wm = moveOf(sol.w), ws = san(board, wm);
-        moves.push({ n: (no + 1) + '.', s: ws, c: 'w' });
-        doMove(wm, false); setMsg('good', sol.reply, true);
-        later(0.5, () => { locked = false; });
-      });
-    } else wrongMove(key, s, no);
+    line.keys.push(key);
+    moves.push({ n: no + '…', s, c: 'b', key });
+    setStep(step + 1);
+    say('watch', 1.2);
+    if (mate) { later(0.45, () => (line.bad ? attemptFailed('luck') : win())); return; }
+    if (left <= 0) { later(0.6, () => attemptFailed('moves')); return; }
+    if (!legal(board, 'w').length) { later(0.6, () => attemptFailed('stalemate')); return; }
+    setMsg('info', `Move ${no} of ${X}: …${s}.`);
+    later(0.9, () => {
+      const wm = whiteReply(left), ws = san(board, wm);
+      moves.push({ n: (no + 1) + '.', s: ws, c: 'w' });
+      doMove(wm, false); setMsg('info', ` White replies ${ws}.`, true);
+      if (isMate(board, 'b') || !legal(board, 'b').length) { later(0.8, () => attemptFailed('moves')); return; }
+      later(0.5, () => { locked = false; });
+    });
   }
 
-  function wrongMove(key, s, no) {
-    moves.push({ n: no + '…', s: s + '?', c: 'b', bad: true });
-    const p = punishment(), ws = p ? san(board, p.m) : '';
-    const hint = LV.hints[step + ':' + key];
-    const text = hint
-      || (p && p.mate ? `That does not stop the threat. White plays ${ws}.`
-        : p && p.escape ? `White escapes the check with ${ws}, and ${LV.threatName} is still coming.`
-          : p ? `Too slow. White plays ${ws} and the attack goes on.` : 'That is not the line. The position resets.');
-    setMsg('bad', text);
-    sound.wrong(); shake(14); invertT = 0.14; say('angry', 2.6); crate.om += 0.3;
-    if (p) later(0.75, () => { moves.push({ n: (no + 1) + '.', s: ws, c: 'w' }); doMove(p.m, false); });
-    later(2.6, () => { resetBoard(); setMsg('info', 'Position reset. The clock keeps running.'); locked = false; });
+  // The attempt is over without a forced mate in X: reveal where the line went wrong, then reset.
+  function attemptFailed(why) {
+    const X = mateMoves(), bad = line.bad;
+    const row = bad && moves.find((r) => r.c === 'b' && r.n === (bad.idx + 1) + '…');
+    if (row) { row.s += '?'; row.bad = true; }
+    const where = bad ? (LV.hints[bad.idx + ':' + bad.key]
+      || (bad.ws ? `Your line went wrong at move ${bad.idx + 1}, …${bad.s}: White could answer ${bad.ws}.`
+        : `Your line went wrong at move ${bad.idx + 1}, …${bad.s}.`)) : '';
+    const head = why === 'luck' ? `Checkmate, but it was not forced. Only a forced checkmate in ${X} moves counts.`
+      : why === 'stalemate' ? 'Stalemate. That is not a win.'
+        : `${X} moves and no checkmate. Those moves are not valid: this board is checkmate in ${X}, the shortest win.`;
+    setMsg('bad', `${head} ${where} The position resets.`.replace(/\s+/g, ' ').trim());
+    sound.wrong(); shake(14); invertT = 0.14; say('angry', 3.4); crate.om += 0.3;
+    later(5.2, () => { resetBoard(); setMsg('info', `Position reset. Checkmate in ${X} moves. The clock keeps running.`); locked = false; });
   }
 
   function resetBoard() {
+    line = { bad: null, keys: [] };
     board = boardFrom(LV.setup, LV.number * 100); legalB = legal(board, 'b'); setStep(0); selected = -1; lastMove = null;
     moves = [{ n: '1.', s: LV.openingMove, c: 'w' }]; syncSprites(false); shake(6); sound.whoosh(0.35);
   }
 
   function win() {
+    // reveal the annotations: the scripted line gets its !/!! marks and its story
+    const scripted = line.keys.every((k, i) => LV.solution[i] && k === LV.solution[i].b);
+    if (scripted) moves.forEach((r) => { if (r.c === 'b') { const i = parseInt(r.n, 10) - 1; if (LV.solution[i]) r.s += LV.solution[i].ann; } });
+    setMsg('good', scripted ? LV.solution[LV.solution.length - 1].say : `Checkmate in ${moves.filter((r) => r.c === 'b').length}. A forced line of your own.`);
+    rings.push({ ...sqXY(lastMove.to), t: 0 }); sound.good(2); say('smug', 1.8);
     mode = 'over'; locked = true; const used = TIME - timeLeft;
     TH.final = 'triumph';
     later(0.3, () => { sound.win(); flash = 0.35; });
@@ -715,6 +777,7 @@ function createEngine(canvas, cb, opts) {
     tasks = []; parts = []; rings = []; flash = 0; TH.final = null; TH.overT = 0;
     if (TH.rising || TH.rise) { TH.rising = false; TH.rise = 0; TH.alpha = 0; }
     if (thDust) { thDust.dir = -1; thDust.t = Math.min(thDust.t, 3.2); }
+    line = { bad: null, keys: [] };
     board = boardFrom(LV.setup, LV.number * 100); legalB = legal(board, 'b'); setStep(0); selected = -1; lastMove = null; dragS = null;
     timeLeft = TIME; lastSec = TIME; cb.time(TIME);
     moves = [{ n: '1.', s: LV.openingMove, c: 'w' }];
@@ -973,6 +1036,9 @@ function createEngine(canvas, cb, opts) {
     const n = LV.solution.length, cx = PX + PW / 2;
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 10;
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = `15px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.88)';
+    ctx.font = `22px ${FONT}`; ctx.fillStyle = '#ffffff';
+    ctx.fillText(`MATE IN ${n}`, cx, BY - 20);
+    ctx.font = `15px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.88)';
     ctx.fillText(`MOVE ${Math.min(step + 1, n)} OF ${n}`, cx, BY + 6);
     for (let i = 0; i < n; i++) {
       const x = cx - ((n - 1) * 20) / 2 + i * 20; ctx.beginPath(); ctx.arc(x, BY + 22, 4.5, 0, TAU);
@@ -1245,7 +1311,7 @@ export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComple
       <header className="bnw-top">
         <div className="bnw-brand">
           <span className="bnw-logo">B<small>n</small><span className="w">W</span></span>
-          <span className="bnw-lv">LEVEL {LV.number} · {LV.title.toUpperCase()} · BLACK TO MOVE</span>
+          <span className="bnw-lv">LEVEL {LV.number} · {LV.title.toUpperCase()} · CHECKMATE IN {LV.solution.length}</span>
         </div>
         <div className={`bnw-timer${low ? ' low' : ''}`} role="timer" aria-live="off" aria-label={`Time left ${fmt(time)}`}>
           <div className="bnw-clock">{fmt(time)}</div>
@@ -1269,7 +1335,7 @@ export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComple
             <div className="bnw-ov">
               <div className="bnw-big">B<span className="n">n</span><span className="w">W</span></div>
               <div className="bnw-sub">{LEVELS.length} LEVELS</div>
-              <div className="bnw-line">You are Thanos. Escape the mate. Two minutes per board.</div>
+              <div className="bnw-line">You are Thanos. Escape the mate. Two minutes per board. Level 1 is checkmate in {LEVELS[0].solution.length} moves, Level 2 is checkmate in {LEVELS[1].solution.length}.</div>
               {unlocked >= 2
                 ? <button className="bnw-btn" onClick={() => start(1)}>Continue · Level 2</button>
                 : <button className="bnw-btn" onClick={() => start(0)}>Start</button>}

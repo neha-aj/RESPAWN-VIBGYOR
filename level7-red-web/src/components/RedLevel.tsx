@@ -4,12 +4,13 @@ import { createRedGame } from '../game/scenes/index.js';
 /**
  * RED as one self-contained component.
  *   onComplete — called once with 'red' when Thanos walks through the last door
+ *   onDeath    — called once when Thanos has died RED_CHECKPOINT_DEATHS times (the full game sends him back to a checkpoint)
  *   onExit     — called by the title's EXIT button (defaults to a "you can close this tab" screen)
  */
-export default function RedLevel({ onComplete, onExit }: { onComplete?: (id: string) => void; onExit?: () => void }) {
+export default function RedLevel({ onComplete, onDeath, onExit }: { onComplete?: (id: string) => void; onDeath?: () => void; onExit?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const [exited, setExited] = useState(false);
-  const cb = useRef({ onComplete, onExit }); cb.current = { onComplete, onExit };
+  const cb = useRef({ onComplete, onDeath, onExit }); cb.current = { onComplete, onDeath, onExit };
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function RedLevel({ onComplete, onExit }: { onComplete?: (id: str
       if (cancelled || !host.current) return;
       handle = createRedGame(host.current, {
         onComplete: (id: string) => cb.current.onComplete?.(id),
+        onDeath: () => cb.current.onDeath?.(),
         onExit: () => (cb.current.onExit ? cb.current.onExit() : setExited(true)),
       });
       if (import.meta.env.DEV) (window as unknown as { __red?: unknown }).__red = handle!.game;   // dev-only test hook
