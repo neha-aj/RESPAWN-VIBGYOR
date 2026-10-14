@@ -41,7 +41,7 @@ Open http://localhost:5178 in a desktop browser.
 **Every room:**
 - Each room has one hidden pop-up spike. It is deterministic and triggered by position.
 - After 4 deaths in a room, mercy mode outlines its hidden spike and shows a hint.
-- A death plays a 0.6 s shatter, then you respawn and the room's mechanics and timers reset.
+- A death plays a 0.6 s shatter, then you respawn **back in Room 1**, whichever room you died in. `R` still restarts only the current room.
 - **Fever** = min(100, deaths × 6) fills the thermometer and the red vignette. Above 80 the screen shakes.
 
 **Ending:** freeze, then 0.5 s, then a pale-red flash, then `completeLevel('red')` (exactly once), then the typewriter cards:

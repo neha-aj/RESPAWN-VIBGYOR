@@ -9,6 +9,7 @@ const RULES = [
   'Guide Thanos through four rooms to the lit doorway.',
   'Arrows / WASD move · Space jumps · R restarts the room.',
   'Rooms change their rules. Traps hide. Read the warnings.',
+  'Die anywhere and you start again from Room 1.',
   'Four deaths in a room switch on mercy mode.',
   'The Fever thermometer rises with every death.',
   'P or Esc pauses · M mutes.',

@@ -170,7 +170,10 @@ export default class Level7RagePlatformer extends LevelBase {
     if (this.dying > 0) {                                                      // death animation; all room timers frozen
       this.dying -= dt;
       this.shards.forEach((s) => { s.vy += 900 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.rot += dt * 8; });
-      if (this.dying <= 0) this.respawn(true);
+      if (this.dying <= 0) {                                                   // any death sends Thanos back to Room 1
+        if (this.roomIndex > 0) this.buildRoom(0);
+        this.respawn(true);
+      }
       return;
     }
     if (this.transitioning) return;

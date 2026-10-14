@@ -1156,9 +1156,6 @@ const SpeakerIcon = ({ muted }) => (
 /* =============================================================================
    COMPONENT
    ============================================================================= */
-const UNLOCK_KEY = 'bnw-unlocked';
-const readUnlocked = () => { try { return Math.max(1, Math.min(LEVELS.length, parseInt(localStorage.getItem(UNLOCK_KEY), 10) || 1)); } catch (_) { return 1; } };
-const saveUnlocked = (n) => { try { localStorage.setItem(UNLOCK_KEY, String(n)); } catch (_) { /* storage unavailable */ } };
 
 function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
   const stageRef = useRef(null);
@@ -1170,7 +1167,8 @@ function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
 
   const [phase, setPhase] = useState('menu');      // menu | play | won | victory | lost | bye
   const [levelIdx, setLevelIdx] = useState(0);
-  const [unlocked, setUnlocked] = useState(readUnlocked);
+  // Progress lives only for this run: a fresh game always begins at Level 1, and once Level 1 is solved it stays solved.
+  const [unlocked, setUnlocked] = useState(1);
   const timesRef = useRef([]);
   const [time, setTime] = useState(timeLimit);
   const [muted, setMuted] = useState(false);
@@ -1198,7 +1196,7 @@ function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
           timesRef.current[idx] = st.time;
           if (cbRef.current.onLevelComplete) cbRef.current.onLevelComplete(st);
           if (idx + 1 < LEVELS.length) {
-            setUnlocked((u) => { const n = Math.max(u, idx + 2); saveUnlocked(n); return n; });
+            setUnlocked((u) => Math.max(u, idx + 2));
           } else {
             p = 'victory';
             if (cbRef.current.onGameComplete) cbRef.current.onGameComplete({ times: timesRef.current.slice() });
@@ -1239,6 +1237,7 @@ function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
     setRulesOpen(false); setStats(null); setLevelIdx(idx);
     engineRef.current && engineRef.current.start(idx);
   };
+  const newRun = () => { setUnlocked(1); start(0); };
   const resetLevel = () => engineRef.current && engineRef.current.resetPosition();
   const exit = () => {
     setRulesOpen(false);
@@ -1284,8 +1283,9 @@ function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
               <div className="bnw-big">B<span className="n">n</span><span className="w">W</span></div>
               <div className="bnw-sub">{LEVELS.length} LEVELS</div>
               <div className="bnw-line">You are Thanos. Escape the mate. Two minutes per board.</div>
-              <button className="bnw-btn" onClick={() => start(0)}>Start</button>
-              {unlocked >= 2 && <button className="bnw-btn" onClick={() => start(1)}>Level 2</button>}
+              {unlocked >= 2
+                ? <button className="bnw-btn" onClick={() => start(1)}>Continue · Level 2</button>
+                : <button className="bnw-btn" onClick={() => start(0)}>Start</button>}
               <button className="bnw-btn" onClick={() => setRulesOpen(true)}>Rules</button>
               <button className="bnw-btn" onClick={exit}>Exit</button>
             </div>
@@ -1309,7 +1309,7 @@ function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
               <div className="bnw-sub" style={{ fontSize: 15 }}>
                 {LEVELS.map((l, i) => (timesRef.current[i] != null ? `LEVEL ${l.number} · ${fmt(timesRef.current[i])}` : null)).filter(Boolean).join('   ·   ')}
               </div>
-              <button className="bnw-btn" onClick={() => start(0)} autoFocus>Play Again</button>
+              <button className="bnw-btn" onClick={newRun} autoFocus>Play Again</button>
               <button className="bnw-btn" onClick={exit}>Menu</button>
             </div>
           )}
