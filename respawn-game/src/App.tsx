@@ -5,7 +5,7 @@ import { LogoIntro } from './LogoIntro';
 import { BootScreen, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
 import { music } from './music';
 import {
-  beatenBefore, chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_VIDEO, OUTRO_VIDEO, respawnAt, startChapter, type LevelId,
+  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_VIDEO, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
 } from './sequence';
 import { settings } from './settings';
 import { sfx } from './sfx';
@@ -21,7 +21,7 @@ import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
  *
  * Each level runs in its own iframe and posts { type: 'respawn:complete' } when won and
  * { type: 'respawn:death' } when lost (its Game Over). A death sends Thanos back to the last
- * checkpoint beaten (see sequence.ts). `?chapter=<id>` jumps straight into a level.
+ * checkpoint reached (see sequence.ts). `?chapter=<id>` jumps straight into a level.
  */
 
 /**
@@ -222,12 +222,13 @@ export default function App() {
 
     /** BnW and the seven colours, with checkpoints, then the finale. */
     async function run(start: number) {
-      let beaten = beatenBefore(start), respawning = false, first = true;
+      let reached = reachedBy(start - 1), respawning = false, first = true;
       for (let i = start; i < CHAPTERS.length;) {
-        const how = await playChapter(i, first, respawning, respawnAt(beaten));
+        // a checkpoint is yours the moment you arrive at it
+        if (CHECKPOINTS.includes(CHAPTERS[i].id)) reached = CHAPTERS[i].id;
+        const how = await playChapter(i, first, respawning, respawnAt(reached));
         first = false;
-        if (how === 'death') { i = chapterIndex(respawnAt(beaten)); respawning = true; continue; }
-        if (CHECKPOINTS.includes(CHAPTERS[i].id)) beaten = CHAPTERS[i].id;
+        if (how === 'death') { i = chapterIndex(respawnAt(reached)); respawning = true; continue; }
         respawning = false; i++;
       }
       // Every colour is back: the full strip lights up and rings out…

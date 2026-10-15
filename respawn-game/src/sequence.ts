@@ -56,12 +56,13 @@ export const INTRO_VIDEO = 'videos/intro.mp4';
 export const OUTRO_VIDEO = 'videos/outro.mp4';
 
 /*
- * CHECKPOINTS: BLUE, GREEN and RED. A checkpoint counts once that level is BEATEN; dying
- * (a level's Game Over screen; in RED, which has no lives, 10 deaths) sends Thanos back to the
- * last checkpoint beaten, or to VIOLET before the first one:
- *   die in VIOLET, INDIGO or BLUE  → VIOLET
- *   die in GREEN                   → BLUE   (BLUE beaten)
- *   die in YELLOW, ORANGE or RED   → GREEN  (GREEN beaten)
+ * CHECKPOINTS: BLUE, GREEN and RED. A checkpoint counts as soon as Thanos REACHES that level;
+ * dying (a level's Game Over screen; in RED, which has no lives, 10 deaths) sends him back to
+ * the last checkpoint reached, or to VIOLET before the first one:
+ *   die in VIOLET or INDIGO           → VIOLET
+ *   die in BLUE                       → BLUE   (checkpoint)
+ *   die in GREEN, YELLOW or ORANGE    → GREEN  (checkpoint)
+ *   die in RED                        → RED    (checkpoint)
  * BnW comes before all of this and keeps its own retries.
  */
 export const CHECKPOINTS: LevelId[] = ['blue', 'green', 'red'];
@@ -69,21 +70,22 @@ export const FIRST_COLOUR: LevelId = 'violet';
 export const RED_DEATHS = 10;
 export const chapterIndex = (id: LevelId) => CHAPTERS.findIndex((c) => c.id === id);
 
-/** Where a death sends Thanos, given the last checkpoint beaten (null: none yet). */
-export const respawnAt = (beaten: LevelId | null): LevelId => beaten ?? FIRST_COLOUR;
+/** Where a death sends Thanos, given the last checkpoint reached (null: none yet). */
+export const respawnAt = (reached: LevelId | null): LevelId => reached ?? FIRST_COLOUR;
 
-/** The last checkpoint beaten before chapter i (used when a run starts mid-way with ?chapter=). */
-export function beatenBefore(i: number): LevelId | null {
+/** The last checkpoint reached by chapter i, counting chapter i itself. */
+export function reachedBy(i: number): LevelId | null {
   let last: LevelId | null = null;
-  CHAPTERS.forEach((c, j) => { if (j < i && CHECKPOINTS.includes(c.id)) last = c.id; });
+  CHAPTERS.forEach((c, j) => { if (j <= i && CHECKPOINTS.includes(c.id)) last = c.id; });
   return last;
 }
 
 /** The rules, as shown on the menu and the card before BnW. */
 export const CHECKPOINT_RULES: { die: string; back: string; color: string }[] = [
-  { die: 'VIOLET · INDIGO · BLUE', back: 'VIOLET', color: SPECTRUM[0].color },
-  { die: 'GREEN', back: 'BLUE', color: SPECTRUM[2].color },
-  { die: 'YELLOW · ORANGE · RED', back: 'GREEN', color: SPECTRUM[3].color },
+  { die: 'VIOLET · INDIGO', back: 'VIOLET', color: SPECTRUM[0].color },
+  { die: 'BLUE', back: 'BLUE', color: SPECTRUM[2].color },
+  { die: 'GREEN · YELLOW · ORANGE', back: 'GREEN', color: SPECTRUM[3].color },
+  { die: 'RED', back: 'RED', color: SPECTRUM[6].color },
 ];
 
 /** `?chapter=green` starts the run at that chapter, skipping the intro and menu (handy for testing and demos). */

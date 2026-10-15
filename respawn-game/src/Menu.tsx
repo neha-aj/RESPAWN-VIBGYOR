@@ -63,7 +63,7 @@ export function CheckpointRules() {
   return (
     <div className="rules">
       <p className="rules-lead">CHECKPOINTS: <b style={{ color: SPECTRUM[2].color }}>BLUE</b> · <b style={{ color: SPECTRUM[3].color }}>GREEN</b> · <b style={{ color: SPECTRUM[6].color }}>RED</b></p>
-      <p className="rules-note">A checkpoint is yours once you <b>beat</b> that level.</p>
+      <p className="rules-note">A checkpoint is yours as soon as you <b>reach</b> that level. Before BLUE, you go back to VIOLET.</p>
       <ul className="rules-list">
         {CHECKPOINT_RULES.map((r) => (
           <li key={r.die}><span className="die">DIE IN {r.die}</span><span className="arrow">→</span><span className="back" style={{ color: r.color }}>BACK TO {r.back}</span></li>
@@ -253,18 +253,18 @@ export function FallenOverlay({ back }: { back: LevelId }) {
   return (
     <div className="fallen" style={vars({ '--c': SPECTRUM[b].color })}>
       <p className="fallen-title">THANOS HAS FALLEN</p>
-      <p className="fallen-sub">BACK TO CHECKPOINT <b>{SPECTRUM[b].name}</b></p>
+      <p className="fallen-sub">{CHECKPOINTS.includes(back) ? 'BACK TO CHECKPOINT ' : 'BACK TO THE START · '}<b>{SPECTRUM[b].name}</b></p>
     </div>
   );
 }
 
-/** Black card while the checkpoint level loads: its panel, its letter, RESPAWN. */
+/** Black card while the respawn level loads: its panel, its letter, RESPAWN. */
 export function RespawnCard({ band }: { band: number }) {
   return (
     <div className="respawn-card" style={vars({ '--c': SPECTRUM[band].color })}>
       <Thumb band={band} h={210} />
       <p className="respawn-word">RESPAWN</p>
-      <p className="respawn-sub">CHECKPOINT · {SPECTRUM[band].name}</p>
+      <p className="respawn-sub">{CHECKPOINTS.includes(BAND_IDS[band]) ? 'CHECKPOINT' : 'START'} · {SPECTRUM[band].name}</p>
     </div>
   );
 }

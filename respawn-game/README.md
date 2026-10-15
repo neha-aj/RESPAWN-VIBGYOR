@@ -34,7 +34,7 @@ opening `dist/index.html` straight from disk won't work.
 
 Add `?chapter=<id>` to the URL to start there, skipping the intro and the menu (handy for
 testing and demos): `bnw`, `violet`, `indigo`, `blue`, `green`, `yellow`, `orange`, `red`.
-For example: http://localhost:4180/?chapter=green. Checkpoints before that chapter count as beaten.
+For example: http://localhost:4180/?chapter=green. Checkpoints up to and including that chapter count as reached.
 
 ## Your intro and outro videos
 
@@ -47,14 +47,15 @@ While a file is missing, its slot is simply skipped. Hold SPACE skips either one
 
 ## Checkpoints
 
-Checkpoints are **BLUE**, **GREEN** and **RED**. A checkpoint counts once that level is beaten.
-Dying sends Thanos back to the last checkpoint beaten, or to VIOLET before the first one:
+Checkpoints are **BLUE**, **GREEN** and **RED**. A checkpoint counts as soon as Thanos reaches
+that level. Dying sends him back to the last checkpoint reached, or to VIOLET before the first one:
 
 | Die in | Back to |
 |---|---|
-| VIOLET, INDIGO, BLUE | VIOLET |
-| GREEN | BLUE |
-| YELLOW, ORANGE, RED | GREEN |
+| VIOLET, INDIGO | VIOLET |
+| BLUE | BLUE |
+| GREEN, YELLOW, ORANGE | GREEN |
+| RED | RED |
 
 "Dying" is a level's **Game Over** (out of lives or out of time). RED has no lives, so 10 deaths
 there count as one. BnW comes first and keeps its own retries. The rules are shown under
