@@ -181,7 +181,7 @@ export class OrangeGame {
       const left = CHALLENGE - this.elapsed, sec = Math.ceil(left);
       if (sec < this.lastTick && sec <= 5 && left > 0) { this.lastTick = sec; this.sfx('tick', 0.5); }
       this.energy *= Math.exp(-dt * 0.3);
-      if (!this.paceHit && this.elapsed > 3 && this.liveWpm() >= TARGET_WPM && this.typing.accuracy() >= TARGET_ACC) { this.paceHit = true; this.sfx('pace', 0.5); this.toast('40 WPM PACE!'); }
+      if (!this.paceHit && this.elapsed > 3 && this.liveWpm() >= TARGET_WPM && this.typing.accuracy() >= TARGET_ACC) { this.paceHit = true; this.sfx('pace', 0.5); this.toast(`${TARGET_WPM} WPM PACE!`); }
       d.baseExpr = this.typing.streak >= 5 ? 'smug' : 'focus';
       if (this.elapsed >= CHALLENGE) this.finish();
     } else if (st === 'VICTORY_DANCE') {

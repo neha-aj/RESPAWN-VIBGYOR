@@ -36,6 +36,18 @@ Add `?chapter=<id>` to the URL to start there, skipping the intro and the menu (
 testing and demos): `bnw`, `violet`, `indigo`, `blue`, `green`, `yellow`, `orange`, `red`.
 For example: http://localhost:4180/?chapter=green. Checkpoints up to and including that chapter count as reached.
 
+### Phones and tablets
+
+On a touch screen (`pointer: coarse`) the shell lays on-screen controls over each level
+(`src/TouchControls.tsx`): a thumbstick (arrow keys) and action buttons, held down like keys,
+sent into the level's iframe as key events (`src/touch.ts`), so the levels' own code is unchanged.
+ORANGE gets an on-screen keyboard under it (and a touch target of 25 WPM / 85%; laptops keep
+40 WPM / 88%). BnW, the menus and every level's own buttons are simply tapped. The menus, the
+victory hold and the cutscene skip take taps; a portrait phone is asked to turn sideways, and the
+first tap goes fullscreen where the browser allows it. `public/respawn-touch.js` (added to every
+level page) lifts the levels' "desktop only" notice, inside the game only.
+Try it with a mouse: `?touch=1`. On a laptop nothing of this is shown.
+
 ## Your intro and outro videos
 
 Put them in `public/videos/` (then `npm run build`, or just re-run `PLAY.bat` after deleting `dist/`):

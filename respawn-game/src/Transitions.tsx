@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { SPECTRUM } from './sequence';
 import { sfx } from './sfx';
+import { IS_TOUCH } from './touch';
 
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
 
@@ -35,8 +36,8 @@ export function SpectrumCard({ band, leaving, finale }: { band: number; leaving:
 }
 
 /**
- * Hold SPACE (or hold the mouse button) to skip a cutscene. The prompt only shows once the
- * player touches a key or the mouse, so it never sits on top of the scene uninvited.
+ * Hold SPACE (or hold the mouse button, or a finger on a phone) to skip a cutscene. The prompt only
+ * shows once the player touches a key, the mouse or the screen, so it never sits on top of the scene uninvited.
  */
 export function useHoldSkip(onSkip: () => void, enabled = true) {
   const [prompt, setPrompt] = useState(false);
@@ -59,11 +60,11 @@ export function useHoldSkip(onSkip: () => void, enabled = true) {
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === ' ') { e.preventDefault(); if (!e.repeat) down(); } else show(); };
     const onKeyUp = (e: KeyboardEvent) => { if (e.key === ' ') up(); };
     window.addEventListener('keydown', onKeyDown); window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('mousedown', down); window.addEventListener('mouseup', up); window.addEventListener('mousemove', show);
+    window.addEventListener('pointerdown', down); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); window.addEventListener('pointermove', show);
     return () => {
       cancelAnimationFrame(raf); clearTimeout(hide);
       window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('mousedown', down); window.removeEventListener('mouseup', up); window.removeEventListener('mousemove', show);
+      window.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); window.removeEventListener('pointermove', show);
     };
   }, [enabled]);
   return { prompt, held };
@@ -76,7 +77,7 @@ export function SkipPrompt({ prompt, held }: { prompt: boolean; held: number }) 
         <circle cx="18" cy="18" r="15" className="track" />
         <circle cx="18" cy="18" r="15" className="fill" style={{ strokeDashoffset: 94.25 * (1 - held) }} />
       </svg>
-      <span>HOLD <kbd>SPACE</kbd> TO SKIP</span>
+      <span>{IS_TOUCH ? 'HOLD TO SKIP' : <>HOLD <kbd>SPACE</kbd> TO SKIP</>}</span>
     </div>
   );
 }
@@ -130,7 +131,7 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
 export function ContinueHint({ hold, color }: { hold: number; color: string }) {
   return (
     <div className="continue" style={vars({ '--c': color, '--hold': `${hold}ms` })}>
-      <span className="continue-label">CONTINUE <kbd>ENTER</kbd></span>
+      <span className="continue-label">{IS_TOUCH ? 'TAP TO CONTINUE' : <>CONTINUE <kbd>ENTER</kbd></>}</span>
       <span className="continue-bar"><span /></span>
     </div>
   );

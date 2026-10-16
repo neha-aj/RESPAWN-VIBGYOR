@@ -1,7 +1,9 @@
 /* ORANGE — constants, palette, words, pixel font and dance poses. Same numbers as orange.py. */
 export const W = 900, H = 650, SCALE = 2, LW = 450, LH = 325;   // pixel-art canvas, scaled ×2 with hard pixels
 export const CHALLENGE = 60;
-export const TARGET_WPM = 40, TARGET_ACC = 88;
+/** On a phone (inside the full game) the typing is done on an on-screen keyboard, so the bar is lower there. Laptops: 40 WPM, 88%. */
+const PHONE = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+export const TARGET_WPM = PHONE ? 25 : 40, TARGET_ACC = PHONE ? 85 : 88;
 export const BPM = 120, BEAT = 60 / BPM;
 export const VICTORY_DANCE_T = 2.6, DOOR_T = 2.6, ENTRY_T = 3.2;
 export const MAX_PARTICLES = 260;
@@ -126,5 +128,5 @@ export const HEROES = ['ironman', 'cap', 'thor', 'hulk', 'spidey', 'widow', 'pan
 export const RULES_PLACEHOLDER = {
   isPlaceholder: true,
   lines: ['TYPE THE SENTENCE ON SCREEN, SPACES AND ALL.', 'EVERY CORRECT KEY IS A DANCE MOVE FOR THANOS.', 'WRONG KEYS ARE ERRORS - BACKSPACE CANNOT ERASE THEM.',
-    'BACKSPACE ONLY FIXES THE CURRENT SENTENCE.', 'HOLD 40 WPM WITH 88% ACCURACY FOR 60 SECONDS.', 'WPM = CORRECT CHARACTERS / 5 PER MINUTE.', 'ESC PAUSES. WIN AND THE PHASE DOOR OPENS.'],
+    'BACKSPACE ONLY FIXES THE CURRENT SENTENCE.', `HOLD ${TARGET_WPM} WPM WITH ${TARGET_ACC}% ACCURACY FOR 60 SECONDS.`, 'WPM = CORRECT CHARACTERS / 5 PER MINUTE.', 'ESC PAUSES. WIN AND THE PHASE DOOR OPENS.'],
 };

@@ -4,6 +4,7 @@ import { clamp, drawThanos, ease, easeOut, glow, lerp, LETTER_Y, loadPicture, PA
 import { LOGO_T, music } from './music';
 import { SPECTRUM } from './sequence';
 import { settings } from './settings';
+import { IS_TOUCH } from './touch';
 import { SkipPrompt, useHoldSkip } from './Transitions';
 
 /*
@@ -247,7 +248,7 @@ export function LogoIntro({ onDone }: { onDone: () => void }) {
   return (
     <div className="logo-layer">
       <canvas ref={ref} className="logo-canvas" aria-label="Thanos walks into the dark with a torch. Its light finds the letters V I B G Y O R one by one, then the whole VIBGYOR picture appears." />
-      {canLeave && <div className="press-any">PRESS ANY KEY</div>}
+      {canLeave && <div className="press-any">{IS_TOUCH ? 'TAP TO GO ON' : 'PRESS ANY KEY'}</div>}
       {!canLeave && <SkipPrompt prompt={prompt} held={held} />}
     </div>
   );

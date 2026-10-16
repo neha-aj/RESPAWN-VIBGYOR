@@ -4,7 +4,8 @@
  *   --skip-build     only copy existing dist/ folders (faster when nothing changed)
  *
  * Each copied index.html gets the sound bridge (public/respawn-audio.js) first in its <head>,
- * so the menu's SOUND / MASTER VOLUME settings reach the level.
+ * so the menu's SOUND / MASTER VOLUME settings reach the level, and the touch bridge
+ * (public/respawn-touch.js), so phones can play it with the shell's on-screen controls.
  */
 import { execSync } from 'node:child_process';
 import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -40,7 +41,7 @@ for (const [id, folder] of Object.entries(LEVELS)) {
   rmSync(out, { recursive: true, force: true });
   cpSync(join(dir, 'dist'), out, { recursive: true });
   const page = join(out, 'index.html');
-  writeFileSync(page, readFileSync(page, 'utf8').replace('<head>', '<head>\n    <script src="../../respawn-audio.js"></script>'));
+  writeFileSync(page, readFileSync(page, 'utf8').replace('<head>', '<head>\n    <script src="../../respawn-audio.js"></script>\n    <script src="../../respawn-touch.js"></script>'));
   console.log(`[${id}] → public/levels/${id}`);
 }
 

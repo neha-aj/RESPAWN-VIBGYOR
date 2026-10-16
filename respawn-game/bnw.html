@@ -3,10 +3,33 @@
   <head>
     <!-- the menu's SOUND / MASTER VOLUME reach BnW too -->
     <script src="./respawn-audio.js"></script>
+    <!-- …and the touch bridge, so phones can play it inside the game -->
+    <script src="./respawn-touch.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BnW</title>
     <style>html,body,#root{margin:0;height:100%;background:#000}</style>
+    <style>
+      /* a phone on its side is short: BnW's header and screens tighten up to fit (touch screens only) */
+      @media (pointer: coarse) and (max-height: 520px) {
+        #root .bnw-root { min-height: 0; height: 100%; }
+        #root .bnw-top { min-height: 0; padding: 4px 10px; gap: 8px; }
+        #root .bnw-logo { font-size: 22px; }
+        #root .bnw-clock { font-size: 24px; }
+        #root .bnw-timer { min-width: 100px; }
+        #root .bnw-bar { width: 100px; margin-top: 3px; }
+        #root .bnw-hb { font-size: 10px; letter-spacing: .08em; padding: 7px 8px; gap: 4px; }
+        #root .bnw-ov { gap: 8px; padding: 8px; }
+        #root .bnw-big { font-size: 60px; }
+        #root .bnw-h2 { font-size: 34px; }
+        #root .bnw-sub { font-size: 12px; }
+        #root .bnw-line { font-size: 14px; max-width: 560px; }
+        #root .bnw-btn { width: 210px; padding: 9px 0; font-size: 14px; }
+        #root .bnw-panel { padding: 14px 20px; max-height: 92%; overflow: auto; }
+        #root .bnw-panel h2 { font-size: 20px; margin-bottom: 10px; }
+        #root .bnw-panel ol { font-size: 14px; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

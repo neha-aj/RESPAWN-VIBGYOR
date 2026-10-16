@@ -9,6 +9,8 @@ import {
 } from './sequence';
 import { settings } from './settings';
 import { sfx } from './sfx';
+import { enterFullscreen, IS_TOUCH } from './touch';
+import { TouchControls } from './TouchControls';
 import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
 
 /*
@@ -283,14 +285,18 @@ export default function App() {
 
   const ch = level ? CHAPTERS[level.idx] : null;
   const irisStyle = iris && ({ '--d': iris.d, '--ms': `${iris.ms}ms`, '--c': iris.color } as CSSProperties);
+  // phones: the on-screen controls, only while a level is actually being played
+  const touchOn = IS_TOUCH && !!ch && level!.visible && !won && !fallen && !iris && !card && !reveal && !respawn && !video && !scene;
   const shellScene = scene === 'menu' || scene === 'rules' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
 
   return (
     <div className="stage">
       {ch && (
-        <iframe key={`${ch.id}-${level!.run}`} ref={frameRef} src={ch.src} title={ch.name} className="level" allow="autoplay; fullscreen"
+        <iframe key={`${ch.id}-${level!.run}`} ref={frameRef} src={ch.src} title={ch.name} className={`level${IS_TOUCH && ch.id === 'orange' ? ' with-kb' : ''}`} allow="autoplay; fullscreen"
           style={{ visibility: level!.visible ? 'visible' : 'hidden' }} />
       )}
+
+      {touchOn && <TouchControls key={`${ch!.id}-${level!.run}`} level={ch!.id} color={ch!.color} target={() => frameRef.current?.contentWindow} />}
 
       {won && (
         <div ref={shieldRef} tabIndex={-1} className="shield" onClick={() => { if (performance.now() >= continueFrom.current) signal('continue'); }}>
@@ -315,7 +321,7 @@ export default function App() {
 
       {bloom && <Bloom key={bloom.key} color={bloom.color} onDone={() => setBloom(null)} />}
 
-      {scene === 'boot' && <BootScreen onGo={() => { audio.get(); signal('boot'); }} />}
+      {scene === 'boot' && <BootScreen onGo={() => { audio.get(); if (IS_TOUCH) enterFullscreen(); signal('boot'); }} />}
       {scene === 'logo' && <LogoIntro onDone={() => signal('logoDone')} />}
       {scene === 'menu' && <MainMenu onStart={() => signal('start')} onStop={() => signal('stop')} />}
       {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
@@ -323,6 +329,14 @@ export default function App() {
       {scene === 'end' && <EndScreen onMenu={() => signal('endMenu')} />}
 
       {crt && shellScene && <div className="crt" aria-hidden />}
+
+      {IS_TOUCH && (
+        <div className="rotate" role="alert">
+          <div className="rotate-phone" aria-hidden />
+          <p>TURN YOUR PHONE<br />SIDEWAYS TO PLAY</p>
+          <small>VIBGYOR PLAYS IN LANDSCAPE</small>
+        </div>
+      )}
     </div>
   );
 }

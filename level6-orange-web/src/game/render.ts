@@ -344,8 +344,8 @@ export class Renderer {
       c.fillStyle = rgb(C.DOOR); c.fillRect(bx + Math.round((bw * target) / cap) - 1, by - 4, 2, bh + 8);
       this.text(st === 'PLAYING' ? (ok ? 'OK' : 'LOW') : String(target), 2, ok ? C.DOOR : C.SPOT, bx + bw + 8, 44, 'left', null);
     };
-    meter(140, 'WPM / 40', wpm, TARGET_WPM, 90, String(Math.round(wpm)).padStart(3, ' '));
-    meter(420, 'ACCURACY / 88%', acc, TARGET_ACC, 100, `${String(Math.round(acc)).padStart(3, ' ')}%`);
+    meter(140, `WPM / ${TARGET_WPM}`, wpm, TARGET_WPM, 90, String(Math.round(wpm)).padStart(3, ' '));
+    meter(420, `ACCURACY / ${TARGET_ACC}%`, acc, TARGET_ACC, 100, `${String(Math.round(acc)).padStart(3, ' ')}%`);
     this.text(`CORRECT ${tp.correct}`, 2, C.HUD, W - 22, 20, 'right', null);
     this.text(`ERRORS  ${tp.wrong}`, 2, game.errT > 0 ? C.SPOT : C.HUD, W - 22, 36, 'right', null);
     this.text(`WORDS   ${tp.words}`, 2, C.HUD, W - 22, 52, 'right', null);
@@ -369,7 +369,7 @@ export class Renderer {
     if (st === 'READY') {
       this.panel(140, 110, 620, 330, 0.88);
       this.text('READY?', 8, C.SPOT, W / 2, 160);
-      ['TYPE EACH SENTENCE TO MAKE THANOS DANCE.', 'REACH AT LEAST 40 WPM', 'WITH AT LEAST 88% ACCURACY', 'OVER THE FULL 60 SECONDS.'].forEach((l, i) => this.text(l, i === 1 || i === 2 ? 3 : 2, i === 1 || i === 2 ? C.DOOR : C.HUD, W / 2, 222 + i * 38));
+      ['TYPE EACH SENTENCE TO MAKE THANOS DANCE.', `REACH AT LEAST ${TARGET_WPM} WPM`, `WITH AT LEAST ${TARGET_ACC}% ACCURACY`, 'OVER THE FULL 60 SECONDS.'].forEach((l, i) => this.text(l, i === 1 || i === 2 ? 3 : 2, i === 1 || i === 2 ? C.DOOR : C.HUD, W / 2, 222 + i * 38));
       this.text('PRESS ENTER TO START', 4, Math.floor(t * 2) % 2 ? C.SPOT : C.AMBER, W / 2, 400);
     } else if (st === 'PAUSED') {
       this.panel(250, 140, 400, 300, 0.9);
@@ -382,7 +382,7 @@ export class Renderer {
       this.text(`ACCURACY ${game.finalAcc.toFixed(1)}%`, 3, C.HUD, W / 2, 278);
       const missed: string[] = [];
       if (tp.attempts === 0) missed.push('NO LETTERS TYPED');
-      else { if (game.finalWpm < TARGET_WPM) missed.push(`SPEED MISSED: ${game.finalWpm.toFixed(1)} / 40 WPM`); if (game.finalAcc < TARGET_ACC) missed.push(`ACCURACY MISSED: ${game.finalAcc.toFixed(1)} / 88%`); }
+      else { if (game.finalWpm < TARGET_WPM) missed.push(`SPEED MISSED: ${game.finalWpm.toFixed(1)} / ${TARGET_WPM} WPM`); if (game.finalAcc < TARGET_ACC) missed.push(`ACCURACY MISSED: ${game.finalAcc.toFixed(1)} / ${TARGET_ACC}%`); }
       missed.forEach((m, i) => this.text(m, 2, C.AMBER, W / 2, 322 + i * 26));
       this.text('PRESS R TO RETRY', 4, Math.floor(t * 2) % 2 ? C.DOOR : C.SPOT, W / 2, 420);
     } else if (st === 'VICTORY_DANCE' || st === 'DOOR_OPENING' || st === 'PORTAL_ENTRY') {

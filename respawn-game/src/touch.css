@@ -1,0 +1,121 @@
+/* =====================================================================================
+ * Phones and tablets only (touch mode, see touch.ts): the on-screen controls over a level,
+ * the keyboard under ORANGE, and the rotate-to-landscape prompt. None of it renders on a laptop.
+ * ===================================================================================== */
+.touch {
+  position: absolute; inset: 0; z-index: 12; pointer-events: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  font-size: 10px; letter-spacing: 0.1em; color: #fff;
+}
+.touch button, .touch-stick {
+  pointer-events: auto; touch-action: none; font: inherit; color: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
+}
+
+/* top right: pause, extras, fullscreen */
+.touch-top {
+  position: absolute; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right));
+  display: flex; gap: 8px;
+}
+.t-sys {
+  min-width: 40px; height: 40px; padding: 0 10px; border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45); border: 1px solid color-mix(in srgb, var(--c) 55%, rgba(255, 255, 255, 0.35));
+}
+.t-fs { font-size: 18px; }
+.t-sys.on { background: color-mix(in srgb, var(--c) 45%, #000); }
+
+.touch.lvl-blue .touch-top { top: calc(70px + env(safe-area-inset-top)); }   /* below BLUE's own header */
+.touch-hint {
+  position: absolute; left: 50%; top: 22%; transform: translateX(-50%);
+  font-size: 8px; color: rgba(255, 255, 255, 0.55); white-space: nowrap; text-shadow: 0 1px 2px #000;
+  animation: hint-out 1s ease-in 6s forwards;
+}
+@keyframes hint-out { to { opacity: 0; } }
+
+/* the thumbstick: sized to sit in the black margin beside a level's 900×650 picture on a phone */
+.touch-stick {
+  position: absolute; left: calc(14px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: clamp(96px, 28vmin, 132px); height: clamp(96px, 28vmin, 132px); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.14));
+  border: 2px solid color-mix(in srgb, var(--c) 50%, rgba(255, 255, 255, 0.3));
+  display: flex; align-items: center; justify-content: center;
+}
+.touch-stick.lr { border-radius: 999px; height: clamp(56px, 16vmin, 72px); width: clamp(96px, 27vmin, 150px); }
+.stick-knob {
+  width: 46%; height: auto; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: color-mix(in srgb, var(--c) 40%, rgba(255, 255, 255, 0.35));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 50%, transparent);
+}
+.touch-stick.lr .stick-knob { width: auto; height: 78%; }
+
+/* action buttons, bottom right */
+.touch-btns {
+  position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.touch-btns.n6 { display: grid; grid-template-columns: repeat(2, auto); gap: 8px; }
+.t-btn {
+  width: clamp(56px, 16vmin, 72px); height: clamp(56px, 16vmin, 72px); border-radius: 50%; padding: 0;
+  background: rgba(0, 0, 0, 0.35); border: 2px solid color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.35));
+  font-size: 9px; text-shadow: 0 1px 2px #000;
+}
+.touch-btns.n6 .t-btn { width: clamp(46px, 13vmin, 60px); height: clamp(46px, 13vmin, 60px); font-size: 7px; }
+.touch-btns.n1 .t-btn { width: clamp(68px, 20vmin, 88px); height: clamp(68px, 20vmin, 88px); }
+.t-btn.on { background: color-mix(in srgb, var(--c) 50%, #000); transform: scale(0.94); }
+
+/* ORANGE: the level sits above an on-screen keyboard */
+.level.with-kb { height: 60%; }
+.touch.with-kb .touch-top { top: auto; bottom: calc(40% + 8px); }
+.touch-kb {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 40%; pointer-events: auto;
+  padding: 6px calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));
+  background: #0c0603; border-top: 2px solid color-mix(in srgb, var(--c) 60%, #000);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.kb-row { flex: 1; display: flex; gap: 5px; justify-content: center; }
+.kb-key {
+  flex: 0 1 9.4%; min-width: 0; border-radius: 6px; padding: 0; font-size: clamp(10px, 2.4vmin, 14px);
+  background: #24140a; border: 1px solid color-mix(in srgb, var(--c) 35%, #000); box-shadow: 0 2px 0 #000;
+}
+.kb-key.wide { flex-basis: 15%; }
+.kb-key.space { flex-basis: 52%; }
+.kb-key.on { background: color-mix(in srgb, var(--c) 70%, #000); color: #000; transform: translateY(1px); box-shadow: none; }
+
+/* hold a phone sideways */
+.rotate {
+  position: fixed; inset: 0; z-index: 200; background: #000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 28px; text-align: center; padding: 24px;
+  font-size: 12px; letter-spacing: 0.2em; line-height: 1.8;
+}
+.rotate-phone {
+  width: 40px; height: 68px; border: 3px solid #fff; border-radius: 8px; position: relative;
+  animation: turn 2.2s ease-in-out infinite;
+}
+.rotate-phone::after { content: ''; position: absolute; left: 50%; bottom: 4px; width: 8px; height: 3px; margin-left: -4px; background: #fff; }
+@keyframes turn { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+.rotate small { font-size: 8px; color: #888; }
+@media (orientation: portrait) {
+  .is-touch .rotate { display: flex; }
+}
+
+/* no pull-to-refresh or rubber-banding while playing */
+.is-touch, .is-touch body { overscroll-behavior: none; touch-action: manipulation; }
+
+/* a phone on its side is short: the shell's own screens tighten up to fit */
+@media (max-height: 520px) {
+  .is-touch .title { font-size: clamp(26px, 11vh, 60px); }
+  .is-touch .menu-wrap { padding: 4vh 5vw 9vh; gap: 2vh 4vw; }
+  .is-touch .menu-list { gap: 3.2vh; }
+  .is-touch .mi { font-size: 13px; padding: 4px 0; }
+  .is-touch .panel { max-height: 70vh; padding: 14px 16px; }
+  .is-touch .menu-list.settings { gap: 2.4vh; }
+  .is-touch .vbar i { width: 14px; height: 18px; }
+  .is-touch .lbl { min-width: 12em; }
+  .is-touch .rules-card { justify-content: flex-start; gap: 14px; padding: 14px 6vw; overflow: auto; }
+  .is-touch .rules-card h2 { margin-bottom: 0; }
+  .is-touch .rules-card .roadmap { display: none; }
+  .is-touch .rules-card .rules { gap: 8px; }
+  .is-touch .rules-card .rules-list { gap: 6px; }
+  .is-touch .rules-card .press { position: sticky; bottom: 0; padding: 8px 0; background: #000; }
+  .is-touch .respawn-card .thumb { zoom: 0.55; }
+}

@@ -3,6 +3,7 @@ import { PANELS, PIC_URL } from './art';
 import { CHECKPOINT_RULES, CHECKPOINTS, RED_DEATHS, SPECTRUM, type LevelId } from './sequence';
 import { settings, type Settings } from './settings';
 import { sfx } from './sfx';
+import { IS_TOUCH } from './touch';
 
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
 const BAND_IDS: LevelId[] = ['violet', 'indigo', 'blue', 'green', 'yellow', 'orange', 'red'];
@@ -126,7 +127,7 @@ export function MainMenu({ onStart, onStop }: { onStart: () => void; onStop: () 
           <Roadmap />
         </section>
       </div>
-      <div className="menu-hint">UP / DOWN CHOOSE · ENTER SELECT{view !== 'main' && ' · ESC BACK'}</div>
+      <div className="menu-hint">{IS_TOUCH ? 'TAP TO CHOOSE' : <>UP / DOWN CHOOSE · ENTER SELECT{view !== 'main' && ' · ESC BACK'}</>}</div>
     </div>
   );
 }
@@ -177,7 +178,7 @@ function SettingsList({ back }: { back: () => void }) {
       <ul className="menu-list settings" role="menu">
         {rows.map((r, i) => <Row key={r.label} i={i} sel={sel} setSel={setSel} onClick={() => { setSel(i); sfx.select(); r.pick(); }}><span className="lbl">{r.label}</span>{r.value}</Row>)}
       </ul>
-      <p className="panel-note">SOUND and MASTER VOLUME apply to every level too. LEFT / RIGHT changes a volume.</p>
+      <p className="panel-note">SOUND and MASTER VOLUME apply to every level too. {IS_TOUCH ? 'TAP A BAR' : 'LEFT / RIGHT'} changes a volume.</p>
     </div>
   );
 }
@@ -189,7 +190,7 @@ function HowItWorks({ back }: { back: () => void }) {
       <h2>HOW IT WORKS</h2>
       <p className="rules-note">Eight levels in a row, one after another: BnW first, then the seven colours. Each level shows its own rules and controls on its title screen.</p>
       <CheckpointRules />
-      <p className="rules-note">ENTER moves on after a level is won. Hold SPACE to skip a cutscene.</p>
+      <p className="rules-note">{IS_TOUCH ? 'TAP to move on after a level is won. Hold a finger on the screen to skip a cutscene. On-screen controls appear in every level.' : 'ENTER moves on after a level is won. Hold SPACE to skip a cutscene.'}</p>
       <ul className="menu-list"><li className="mi on" onClick={() => { sfx.select(); back(); }}><span className="cursor">▶</span>BACK</li></ul>
     </div>
   );
@@ -206,8 +207,8 @@ export function BootScreen({ onGo }: { onGo: () => void }) {
   }, [onGo]);
   return (
     <div className="boot">
-      <p className="blink">▶ PRESS ANY KEY</p>
-      <p className="boot-note">BEST WITH SOUND ON · KEYBOARD AND MOUSE</p>
+      <p className="blink">{IS_TOUCH ? '▶ TAP TO START' : '▶ PRESS ANY KEY'}</p>
+      <p className="boot-note">{IS_TOUCH ? 'BEST WITH SOUND ON · PHONE SIDEWAYS' : 'BEST WITH SOUND ON · KEYBOARD AND MOUSE'}</p>
     </div>
   );
 }
@@ -227,7 +228,7 @@ export function RulesCard({ onGo }: { onGo: () => void }) {
       <h2>BEFORE YOU BEGIN</h2>
       <CheckpointRules />
       <Roadmap compact />
-      <p className={`press${ready ? ' blink' : ''}`}>{ready ? 'PRESS ENTER TO BEGIN' : ' '}</p>
+      <p className={`press${ready ? ' blink' : ''}`}>{ready ? (IS_TOUCH ? 'TAP TO BEGIN' : 'PRESS ENTER TO BEGIN') : ' '}</p>
     </div>
   );
 }
