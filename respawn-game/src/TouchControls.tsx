@@ -22,7 +22,7 @@ const PAUSE: Btn = { label: 'II', key: 'Escape' };
 
 /** Per level: which keys it reads, as the buttons a thumb can reach. BnW is played by tapping the board. */
 export const LAYOUTS: Partial<Record<LevelId, Layout>> = {
-  violet: { stick: 'lr', buttons: [{ label: 'JUMP', key: ' ' }], hint: 'TAP THE CITY TO SHOOT' },
+  violet: { stick: 'lr', buttons: [{ label: 'JUMP', key: ' ' }], hint: 'DRAG TO AIM · DOUBLE TAP TO SHOOT' },
   indigo: { stick: '8', buttons: [{ label: 'FIRE', key: ' ' }] },
   blue: { stick: 'lr', buttons: [{ label: 'USE', key: 'e' }, { label: 'JUMP', key: ' ' }], hint: 'OR TAP A THING TO USE IT', ownPause: true },   // BLUE's header has its own pause button
   green: { stick: '8', buttons: [{ label: 'RUN', key: 'Shift' }], hint: 'TOUCH THE FOREST TO AIM' },

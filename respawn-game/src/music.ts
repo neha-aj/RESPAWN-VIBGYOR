@@ -153,13 +153,14 @@ class Music {
   }
 
   /* ---------------- the logo score ---------------- */
-  /** Schedules the whole logo score; returns its start time on the audio clock (null without audio). */
-  playLogo(): number | null {
+  /** Schedules the whole logo score; returns its start time on the audio clock (null without audio).
+   *  `from` starts it that many seconds in (phones skip most of the walk-in): earlier footsteps are dropped. */
+  playLogo(from = 0): number | null {
     const ctx = this.ctx(); if (!ctx) return null;
     this.stopLoop(); this.fresh(ctx); this.out!.gain.value = 1;
-    const t0 = ctx.currentTime + 0.05, T = LOGO_T;
-    this.drone(ctx, t0, T.reveal);
-    T.steps.forEach((s) => this.step(ctx, t0 + s));
+    const start = ctx.currentTime + 0.05, t0 = start - from, T = LOGO_T;
+    this.drone(ctx, start, T.reveal - from);
+    T.steps.filter((s) => s >= from).forEach((s) => this.step(ctx, t0 + s));
     this.timpani(ctx, 38, t0 + T.torch, 0.24);
     this.pad(ctx, [38, 45, 50], t0 + T.torch, T.reveal - T.torch, 0.035, 1.5);
     T.letters.forEach((s, i) => {

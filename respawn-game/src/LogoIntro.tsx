@@ -53,6 +53,9 @@ function beam(s: number): { x: number; y: number; r: number; on: number } {
   return { x: 800, y: 450, r: 800, on: 1 };
 }
 
+/** Phones start the logo this far in (Thanos is already mid-walk), so the torch lights V about 2 s after the intro. */
+const LOGO_FROM = IS_TOUCH ? 2.6 : 0;
+
 interface Bit { x: number; y: number; vx: number; vy: number; c: string; life: number; s: number }
 
 export function LogoIntro({ onDone }: { onDone: () => void }) {
@@ -108,8 +111,8 @@ export function LogoIntro({ onDone }: { onDone: () => void }) {
     void loadPicture().then((p) => {
       if (!alive) return;
       pic = p;
-      clock.t0 = performance.now();
-      clock.ctx0 = music.playLogo();
+      clock.t0 = performance.now() - LOGO_FROM * 1000;
+      clock.ctx0 = music.playLogo(LOGO_FROM);
       raf = requestAnimationFrame(frame);
     });
 

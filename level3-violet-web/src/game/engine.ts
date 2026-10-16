@@ -17,6 +17,9 @@ export class VioletEngine {
   private renderer: Renderer;
   private raf = 0; private last = 0; private acc = 0; private lastSig = '';
   private mouse = { x: W / 2, y: H / 2 };
+  /** Touch aiming: one finger drags the crosshair (like a trackpad), a double tap fires. */
+  private drag: { id: number; x: number; y: number; moved: number } | null = null;
+  private lastTap = { t: 0, x: 0, y: 0 };
 
   constructor(private canvas: HTMLCanvasElement, private audio: VioletAudio, private onChange: (s: Snapshot) => void, private onMute: () => void) {
     canvas.width = W; canvas.height = H;
@@ -27,6 +30,9 @@ export class VioletEngine {
     window.addEventListener('blur', this.onBlur);
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerdown', this.onPointerDown);
+    canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', this.onPointerUp);
+    canvas.style.touchAction = 'none';   // no scroll or double-tap zoom while aiming
     this.raf = requestAnimationFrame(this.frame);
   }
 
@@ -37,6 +43,8 @@ export class VioletEngine {
     window.removeEventListener('blur', this.onBlur);
     this.canvas.removeEventListener('pointermove', this.onPointerMove);
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+    this.canvas.removeEventListener('pointerup', this.onPointerUp);
+    this.canvas.removeEventListener('pointercancel', this.onPointerUp);
   }
 
   /* ---------- actions used by the React overlays ---------- */
@@ -67,11 +75,45 @@ export class VioletEngine {
     const r = this.canvas.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
   }
-  private onPointerMove = (e: PointerEvent) => { this.mouse = this.toCanvas(e); this.game.aimPoint = this.mouse; };
+  private onPointerMove = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') { this.onTouchMove(e); return; }
+    this.mouse = this.toCanvas(e); this.game.aimPoint = this.mouse;
+  };
   private onPointerDown = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') { this.onTouchDown(e); return; }
     if (e.button !== 0) return;
     this.mouse = this.toCanvas(e); this.game.aimPoint = this.mouse;
     if (this.game.state === 'play') { this.game.refreshAim(); this.game.fire(); }
+  };
+
+  /* ---------- touch: drag to aim, double tap to shoot ---------- */
+  private onTouchDown(e: PointerEvent) {
+    if (this.drag) return;   // one aiming finger at a time
+    e.preventDefault();
+    this.canvas.setPointerCapture?.(e.pointerId);
+    this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
+  }
+  private onTouchMove(e: PointerEvent) {
+    const d = this.drag; if (!d || d.id !== e.pointerId) return;
+    const r = this.canvas.getBoundingClientRect(), dx = e.clientX - d.x, dy = e.clientY - d.y;
+    d.x = e.clientX; d.y = e.clientY; d.moved += Math.abs(dx) + Math.abs(dy);
+    const SENS = 1.6;   // finger travel → crosshair travel, so a short swipe crosses the city
+    this.mouse = {
+      x: Math.max(0, Math.min(W, this.mouse.x + (dx / r.width) * W * SENS)),
+      y: Math.max(0, Math.min(H, this.mouse.y + (dy / r.height) * H * SENS)),
+    };
+    this.game.aimPoint = this.mouse;
+    if (this.game.state === 'play') this.game.refreshAim();
+  }
+  private onPointerUp = (e: PointerEvent) => {
+    const d = this.drag; if (!d || d.id !== e.pointerId) return;
+    this.drag = null;
+    if (d.moved > 14) return;   // that was an aim, not a tap
+    const now = performance.now(), l = this.lastTap;
+    if (now - l.t < 320 && Math.hypot(e.clientX - l.x, e.clientY - l.y) < 60) {
+      this.lastTap.t = 0;
+      if (this.game.state === 'play') { this.game.refreshAim(); this.game.fire(); }
+    } else this.lastTap = { t: now, x: e.clientX, y: e.clientY };
   };
 
   /* ---------- loop ---------- */
