@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { audio } from './audio';
 import { LetterReveal } from './LetterReveal';
 import { LogoIntro } from './LogoIntro';
+import { StudioSplash } from './Studio';
 import { BootScreen, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
 import { music } from './music';
 import {
-  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_VIDEO, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
+  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
 } from './sequence';
 import { settings } from './settings';
 import { sfx } from './sfx';
@@ -14,7 +15,7 @@ import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
 /*
  * RESPAWN: the whole game, start to finish.
  *
- *   PRESS ANY KEY ─► intro video (yours, when added) ─► logo: Thanos's torch finds V I B G Y O R
+ *   PRESS ANY KEY ─► SNaP studios ─► intro video (skip after 5 s) ─► logo: Thanos's torch finds V I B G Y O R
  *   ─► main menu (START · SETTINGS · HOW IT WORKS · STOP, with the roadmap) ─► the rules card
  *   ─► BnW ─► for each colour: spectrum card ─► torch clip into its letter ─► the level
  *   ─► after RED: the strip lights up ─► outro + credits video (yours, when added) ─► menu
@@ -44,8 +45,8 @@ async function videoExists(url: string) {
   catch { return false; }
 }
 
-type Signal = 'complete' | 'death' | 'continue' | 'videoEnd' | 'boot' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
-type Scene = 'boot' | 'logo' | 'menu' | 'rules' | 'stopped' | 'end' | null;
+type Signal = 'complete' | 'death' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
+type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'stopped' | 'end' | null;
 const CANCEL = Symbol('cancel');
 
 interface Iris { d: string; ms: number; color: string; ring: boolean }
@@ -60,7 +61,7 @@ export default function App() {
   const [card, setCard] = useState<{ band: number; leaving: boolean; finale?: boolean } | null>(null);
   const [reveal, setReveal] = useState<{ band: number; key: number; fading: boolean } | null>(null);
   const [respawn, setRespawn] = useState<{ band: number; leaving: boolean } | null>(null);
-  const [video, setVideo] = useState<{ src: string; color: string; key: number; fading: boolean } | null>(null);
+  const [video, setVideo] = useState<{ src: string; color: string; key: number; fading: boolean; skipAfter?: number } | null>(null);
   const [bloom, setBloom] = useState<{ color: string; key: number } | null>(null);
   const [crt, setCrt] = useState(settings.get().crt);
   useEffect(() => settings.subscribe((s) => setCrt(s.crt)), []);
@@ -140,9 +141,9 @@ export default function App() {
       setIris({ d: IRIS_SHUT, ms: 0, color, ring: false });
     }
 
-    async function playVideo(src: string, color: string) {
+    async function playVideo(src: string, color: string, skipAfter?: number) {
       clear('videoEnd');
-      setVideo({ src, color, key: Date.now(), fading: false });
+      setVideo({ src, color, key: Date.now(), fading: false, skipAfter });
       await waitFor('videoEnd');
       setVideo((v) => v && { ...v, fading: true });
       await sleep(480);
@@ -252,8 +253,10 @@ export default function App() {
       else {
         setScene('boot');
         await waitFor('boot');
+        clear('studioDone'); setScene('studio');
+        await waitFor('studioDone');
         setScene(null);
-        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff');
+        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff', INTRO_SKIP_AFTER);
         setScene('logo');
         await waitFor('logoDone');
       }
@@ -283,7 +286,7 @@ export default function App() {
 
   const ch = level ? CHAPTERS[level.idx] : null;
   const irisStyle = iris && ({ '--d': iris.d, '--ms': `${iris.ms}ms`, '--c': iris.color } as CSSProperties);
-  const shellScene = scene === 'menu' || scene === 'rules' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
+  const shellScene = scene === 'studio' || scene === 'menu' || scene === 'rules' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
 
   return (
     <div className="stage">
@@ -306,7 +309,7 @@ export default function App() {
       {iris && <div className={`iris${iris.ring ? ' ring' : ''}`} style={irisStyle!} />}
 
       {video && (
-        <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} onEnd={() => signal('videoEnd')} />
+        <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} skipAfter={video.skipAfter} onEnd={() => signal('videoEnd')} />
       )}
       {reveal && <LetterReveal key={reveal.key} band={reveal.band} fading={reveal.fading} onEnd={() => signal('videoEnd')} />}
 
@@ -316,6 +319,7 @@ export default function App() {
       {bloom && <Bloom key={bloom.key} color={bloom.color} onDone={() => setBloom(null)} />}
 
       {scene === 'boot' && <BootScreen onGo={() => { audio.get(); signal('boot'); }} />}
+      {scene === 'studio' && <StudioSplash onDone={() => signal('studioDone')} />}
       {scene === 'logo' && <LogoIntro onDone={() => signal('logoDone')} />}
       {scene === 'menu' && <MainMenu onStart={() => signal('start')} onStop={() => signal('stop')} />}
       {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
