@@ -6,7 +6,7 @@ import { StudioSplash } from './Studio';
 import { BootScreen, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
 import { music } from './music';
 import {
-  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
+  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, INTRO_VIDEO_MOBILE, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
 } from './sequence';
 import { settings } from './settings';
 import { sfx } from './sfx';
@@ -258,7 +258,8 @@ export default function App() {
         clear('studioDone'); setScene('studio');
         await waitFor('studioDone');
         setScene(null);
-        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff', INTRO_SKIP_AFTER);
+        const intro = IS_TOUCH && (await videoExists(INTRO_VIDEO_MOBILE)) ? INTRO_VIDEO_MOBILE : INTRO_VIDEO;
+        if (await videoExists(intro)) await playVideo(intro, '#ffffff', INTRO_SKIP_AFTER);
         setScene('logo');
         await waitFor('logoDone');
       }
@@ -312,7 +313,9 @@ export default function App() {
         </div>
       )}
 
-      {iris && <div className={`iris${iris.ring ? ' ring' : ''}`} style={irisStyle!} />}
+      {iris && (IS_TOUCH
+        ? <div className="iris-fade" style={{ opacity: iris.d === IRIS_OPEN ? 0 : iris.d === IRIS_PEEK ? 0.85 : 1, transitionDuration: `${iris.ms}ms` }} />
+        : <div className={`iris${iris.ring ? ' ring' : ''}`} style={irisStyle!} />)}
 
       {video && (
         <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} skipAfter={video.skipAfter} onEnd={() => signal('videoEnd')} />

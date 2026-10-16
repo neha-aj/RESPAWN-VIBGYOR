@@ -92,6 +92,7 @@ export function VideoPlayer({ src, color, fading, onEnd, skipAfter }: { src: str
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [muted, setMuted] = useState(false);
   const ended = useRef(false);
   const end = useRef(onEnd); end.current = onEnd;
   const finish = () => { if (!ended.current) { ended.current = true; end.current(); } };
@@ -100,7 +101,12 @@ export function VideoPlayer({ src, color, fading, onEnd, skipAfter }: { src: str
   useEffect(() => {
     const v = ref.current!;
     const t = setTimeout(() => {
-      v.play().catch(() => setBlocked(true));
+      v.play().catch(() => {
+        if (!IS_TOUCH) { setBlocked(true); return; }
+        // phones (iPhone especially) may refuse sound this long after the tap: start muted instead
+        v.muted = true; setMuted(true);
+        v.play().catch(() => { v.muted = false; setMuted(false); setBlocked(true); });
+      });
     }, 120);
     return () => clearTimeout(t);
   }, []);
@@ -117,6 +123,11 @@ export function VideoPlayer({ src, color, fading, onEnd, skipAfter }: { src: str
     <div className={`video-layer${fading ? ' fading' : ''}`} style={vars({ '--c': color })}>
       <video ref={ref} src={src} className={playing ? 'on' : ''} playsInline preload="auto"
         onPlaying={() => setPlaying(true)} onTimeUpdate={onTime} onEnded={finish} onError={finish} />
+      {muted && (
+        <button type="button" className="tap-sound" onClick={(e) => { e.stopPropagation(); const v = ref.current; if (v) { v.muted = false; void v.play().catch(() => {}); } setMuted(false); }}>
+          🔊 TAP FOR SOUND
+        </button>
+      )}
       {blocked && (
         <button type="button" className="tap-to-play" autoFocus
           onClick={(e) => { e.stopPropagation(); setBlocked(false); void ref.current?.play().catch(() => finish()); }}>

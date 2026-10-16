@@ -53,6 +53,8 @@ export const CHAPTERS: Chapter[] = [
 
 /** Your videos: drop these files into public/videos/ and they play in their slots (skipped while missing). */
 export const INTRO_VIDEO = 'videos/intro.mp4';
+/** Phones get a 720p copy: a third of the size, and easy for any phone to decode. */
+export const INTRO_VIDEO_MOBILE = 'videos/intro-mobile.mp4';
 export const OUTRO_VIDEO = 'videos/outro.mp4';
 /** The intro can be skipped once it has played this long (seconds): SKIP IN 5… then SKIP. */
 export const INTRO_SKIP_AFTER = 5;

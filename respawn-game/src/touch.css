@@ -119,3 +119,23 @@
   .is-touch .rules-card .press { position: sticky; bottom: 0; padding: 8px 0; background: #000; }
   .is-touch .respawn-card .thumb { zoom: 0.55; }
 }
+
+/* ---------- phones: lighter transitions (the laptop keeps the full effects) ----------
+ * Blur filters, blend modes and huge animated shadows are cheap on a laptop GPU but make
+ * phones stutter, so on touch devices the same moments use opacity and transforms only. */
+.iris-fade { position: absolute; inset: 0; z-index: 20; pointer-events: none; background: #000; transition-property: opacity; transition-timing-function: ease-in-out; will-change: opacity; }
+.tap-sound {
+  position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); padding: 14px 20px;
+  font: inherit; font-size: 12px; letter-spacing: 0.15em; color: #fff; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; cursor: pointer;
+}
+html.is-touch .bloom { mix-blend-mode: normal; width: 90vmax; height: 90vmax; margin: -45vmax 0 0 -45vmax; will-change: transform, opacity; }
+html.is-touch .crt { display: none; }
+html.is-touch .menu-bg { animation: none; }
+html.is-touch .card-name > span { animation-name: letter-in-lite; }
+html.is-touch .respawn-word { animation-name: letter-in-lite; }
+html.is-touch .studio-mark { animation-name: studio-mark-lite; }
+html.is-touch .respawn-card .thumb { animation-name: materialise-lite; }
+html.is-touch .video-layer video { transform: none; transition: opacity 500ms ease-out; }
+@keyframes letter-in-lite { from { opacity: 0; transform: translateY(0.5em) scale(1.25); } to { opacity: 1; transform: none; } }
+@keyframes studio-mark-lite { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes materialise-lite { from { clip-path: inset(50% 0 50% 0); } to { clip-path: inset(0); } }
