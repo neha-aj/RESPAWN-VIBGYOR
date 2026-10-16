@@ -95,6 +95,21 @@ class Sfx {
     [BAND_NOTES[0], BAND_NOTES[2], BAND_NOTES[4], BAND_NOTES[0] * 2].forEach((f) => this.bell(f, 0.95, 0.12, 3.2));
   }
 
+  /** SNaP studios: a deep sub hit with a dark noise swell, then the V-I-B-G-Y-O-R chord rings softly over it. */
+  studioHit() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + 1.4);
+    const g = this.env(ctx, t, 0.5, 0.01, 1.6);
+    o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 1.8);
+    const n = this.noise(ctx, 1.6), f = ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(120, t + 1.3);
+    const ng = this.env(ctx, t, 0.12, 0.01, 1.3);
+    n.connect(f); f.connect(ng); ng.connect(this.out); n.start(t);
+    [BAND_NOTES[0] / 2, BAND_NOTES[2] / 2, BAND_NOTES[4] / 2, BAND_NOTES[0]].forEach((fr, i) => this.bell(fr, 0.05 + i * 0.04, 0.07, 3));
+  }
+
   /** Short confirm blip (continue / skip). */
   blip() {
     const ctx = this.ac(); if (!ctx || !this.out) return;

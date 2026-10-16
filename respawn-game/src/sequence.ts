@@ -1,6 +1,6 @@
 /* The running order of the full game.
  *
- *   [boot: press any key] → INTRO video (videos/intro.mp4, when you add it) → logo reveal
+ *   [boot: press any key] → SNaP studios card → INTRO video (skippable after 5 s) → logo reveal
  *   (Thanos's torch finds V I B G Y O R) → main menu → rules card → BnW → for each colour:
  *   spectrum card → torch clip into its letter → the level … → after RED: the strip lights up
  *   → OUTRO + credits video (videos/outro.mp4, when you add it) → back to the menu.
@@ -54,6 +54,8 @@ export const CHAPTERS: Chapter[] = [
 /** Your videos: drop these files into public/videos/ and they play in their slots (skipped while missing). */
 export const INTRO_VIDEO = 'videos/intro.mp4';
 export const OUTRO_VIDEO = 'videos/outro.mp4';
+/** The intro can be skipped once it has played this long (seconds): SKIP IN 5… then SKIP. */
+export const INTRO_SKIP_AFTER = 5;
 
 /*
  * CHECKPOINTS: BLUE, GREEN and RED. A checkpoint counts as soon as Thanos REACHES that level;

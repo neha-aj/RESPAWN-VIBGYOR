@@ -107,6 +107,13 @@ kbd {
   opacity: 0; transition: opacity 400ms ease; pointer-events: none;
 }
 .skip.show { opacity: 1; }
+.skip-count {
+  position: absolute; right: 28px; bottom: 26px; padding: 10px 16px; font: inherit; font-size: 11px; letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); border: 2px solid rgba(255, 255, 255, 0.25); cursor: default;
+}
+.skip-count.open { color: #fff; border-color: #fff; cursor: pointer; }
+.skip-count.open:hover { background: #fff; color: #000; }
+@media (pointer: coarse) { .skip-count { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); padding: 14px 22px; font-size: 13px; } }
 .skip-ring { width: 26px; height: 26px; transform: rotate(-90deg); }
 .skip-ring circle { fill: none; stroke-width: 3; }
 .skip-ring .track { stroke: rgba(255, 255, 255, 0.2); }

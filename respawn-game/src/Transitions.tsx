@@ -88,7 +88,7 @@ export function SkipPrompt({ prompt, held }: { prompt: boolean; held: number }) 
  * touches a key or the mouse, so it never sits on top of the video uninvited.
  * A missing or broken video simply counts as finished, so the run never gets stuck.
  */
-export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color: string; fading: boolean; onEnd: () => void }) {
+export function VideoPlayer({ src, color, fading, onEnd, skipAfter }: { src: string; color: string; fading: boolean; onEnd: () => void; skipAfter?: number }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -105,7 +105,8 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
     return () => clearTimeout(t);
   }, []);
 
-  const { prompt, held } = useHoldSkip(finish);
+  // with skipAfter, a "SKIP IN 5" countdown (from when the video starts) replaces hold-to-skip
+  const { prompt, held } = useHoldSkip(finish, skipAfter === undefined);
 
   const onTime = () => {
     const v = ref.current!;
@@ -122,8 +123,32 @@ export function VideoPlayer({ src, color, fading, onEnd }: { src: string; color:
           ▶ PLAY
         </button>
       )}
-      <SkipPrompt prompt={prompt} held={held} />
+      {skipAfter === undefined ? <SkipPrompt prompt={prompt} held={held} /> : playing && <SkipCountdown seconds={skipAfter} onSkip={finish} />}
     </div>
+  );
+}
+
+/** Bottom-right: SKIP IN 5… 4… then a SKIP button; ENTER, SPACE or a click/tap skips once it is open. */
+function SkipCountdown({ seconds, onSkip }: { seconds: number; onSkip: () => void }) {
+  const [left, setLeft] = useState(seconds);
+  const cb = useRef(onSkip); cb.current = onSkip;
+  useEffect(() => {
+    const t0 = performance.now();
+    const id = window.setInterval(() => setLeft(Math.max(0, seconds - Math.floor((performance.now() - t0) / 1000))), 200);
+    return () => clearInterval(id);
+  }, [seconds]);
+  const open = left === 0;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); sfx.blip(); cb.current(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+  return (
+    <button type="button" className={`skip-count${open ? ' open' : ''}`} disabled={!open}
+      onClick={(e) => { e.stopPropagation(); if (open) { sfx.blip(); cb.current(); } }}>
+      {open ? 'SKIP ▶' : `SKIP IN ${left}`}
+    </button>
   );
 }
 
