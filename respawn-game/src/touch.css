@@ -139,3 +139,13 @@ html.is-touch .video-layer video { transform: none; transition: opacity 500ms ea
 @keyframes letter-in-lite { from { opacity: 0; transform: translateY(0.5em) scale(1.25); } to { opacity: 1; transform: none; } }
 @keyframes studio-mark-lite { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
 @keyframes materialise-lite { from { clip-path: inset(50% 0 50% 0); } to { clip-path: inset(0); } }
+/* the colour flash after each letter clip: skipped on phones (a full-screen gradient over the level) */
+html.is-touch .bloom { display: none; }
+/* menu: hard pixel shadows only (no blurred glows repainting every frame), fewer embers */
+html.is-touch .title > span { text-shadow: 3px 3px 0 var(--c); will-change: transform; }
+html.is-touch .menu-embers i { box-shadow: none; will-change: transform, opacity; }
+html.is-touch .menu-embers i:nth-child(n + 9) { display: none; }
+/* spectrum card, RESPAWN card and fallen overlay: one light glow instead of two big ones */
+html.is-touch .card-name > span { text-shadow: 0 0 8px color-mix(in srgb, var(--c) 60%, transparent); will-change: transform, opacity; }
+html.is-touch .respawn-word { text-shadow: 3px 3px 0 var(--c); }
+html.is-touch .tap-to-play { animation: none; box-shadow: none; }

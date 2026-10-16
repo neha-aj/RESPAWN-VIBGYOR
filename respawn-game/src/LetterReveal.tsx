@@ -36,7 +36,7 @@ export function LetterReveal({ band, fading, onEnd }: { band: number; fading: bo
     const once = (k: string, s: number, at: number, f: () => void) => { if (s >= at && !fired.has(k)) { fired.add(k); f(); } };
 
     const fit = () => {
-      const dpr = IS_TOUCH ? Math.min(1, 960 / Math.max(1, cv.clientWidth)) : Math.min(1.5, window.devicePixelRatio || 1);   // phones: at most ~960 px wide
+      const dpr = IS_TOUCH ? Math.min(1, 720 / Math.max(1, cv.clientWidth)) : Math.min(1.5, window.devicePixelRatio || 1);   // phones: at most ~720 px wide
       W = cv.width = Math.round(cv.clientWidth * dpr); H = cv.height = Math.round(cv.clientHeight * dpr);
       lit.width = mask.width = W; lit.height = mask.height = H;
       scale = Math.min(W / PIC_W, H / PIC_H);
