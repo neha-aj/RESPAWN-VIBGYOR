@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "build:all": "node scripts/build-levels.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
     "@fontsource/press-start-2p": "^5.1.0",

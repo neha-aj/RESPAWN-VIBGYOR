@@ -45,6 +45,22 @@ Put them in `public/videos/` (then `npm run build`, or just re-run `PLAY.bat` af
 
 While a file is missing, its slot is simply skipped. Hold SPACE skips either one.
 
+## Deploy (website)
+
+The game is live at **https://vibgyor-ochre.vercel.app** (Vercel project `vibgyor`). To put a new
+version live, from `respawn-game/`:
+
+```bash
+npm run deploy
+```
+
+It builds the game and uploads `dist/` straight to that project as the live site. Add
+`-- --levels` (`npm run deploy -- --levels`) when a level's own code has changed, to rebuild the
+levels first. The first time on a computer, sign in once with `npx vercel login`.
+
+Laptops only for now: every level is played with the keyboard, so phones can open the page but
+can't play it yet.
+
 ## Checkpoints
 
 Checkpoints are **BLUE**, **GREEN** and **RED**. A checkpoint counts as soon as Thanos reaches
