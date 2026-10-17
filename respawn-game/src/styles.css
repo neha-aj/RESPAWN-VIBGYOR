@@ -39,15 +39,8 @@ kbd {
 /* ---------- iris ----------
  * A transparent circle whose giant box-shadow is the black. Animating its diameter
  * (--d) opens or closes it; the rim glows in the chapter colour while it moves. */
-.iris { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
-.iris-mask { position: absolute; inset: 0; }
-.iris-ring {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; width: 0; height: 0;
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--c) 80%, #fff),
-    0 0 26px 6px color-mix(in srgb, var(--c) 55%, transparent),
-    inset 0 0 26px 2px color-mix(in srgb, var(--c) 40%, transparent);
-}
+.iris { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+.iris-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* ---------- spectrum card ---------- */
 .card {

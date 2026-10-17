@@ -12,10 +12,11 @@ const vars = (v: Record<string, string | number>) => v as CSSProperties;
  */
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 export function Iris({ stage, ms, color, ring }: { stage: IrisStage; ms: number; color: string; ring: boolean }) {
-  const maskRef = useRef<HTMLDivElement>(null), ringRef = useRef<HTMLDivElement>(null);
-  const cur = useRef<number | null>(null);   // diameter now, px
+  const cvRef = useRef<HTMLCanvasElement>(null);
+  const cur = useRef<number | null>(null);   // diameter now, in window px
   const last = useRef({ stage, ms });
   const [size, setSize] = useState(viewSize);
+  const sc = Math.min(1, 640 / Math.max(size.w, size.h));   // the canvas is small and stretched by CSS: a phone only fills ~300k pixels
 
   useEffect(() => {
     const f = () => setSize(viewSize());
@@ -24,11 +25,21 @@ export function Iris({ stage, ms, color, ring }: { stage: IrisStage; ms: number;
   }, []);
 
   useEffect(() => {
+    const cv = cvRef.current; if (!cv) return;
+    cv.width = Math.max(1, Math.round(size.w * sc)); cv.height = Math.max(1, Math.round(size.h * sc));
+    const g = cv.getContext('2d')!;
     const paint = (d: number) => {
       cur.current = d;
-      const m = maskRef.current, r = ringRef.current;
-      if (m) m.style.background = d < 1 ? '#000' : `radial-gradient(circle at 50% 50%, transparent ${d / 2}px, #000 ${d / 2 + 0.75}px)`;
-      if (r) { r.style.width = r.style.height = `${Math.max(0, d)}px`; r.style.opacity = d < 1 ? '0' : '1'; }
+      const w = cv.width, h = cv.height, r = (d / 2) * sc;
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = '#000';
+      if (r < 0.5) { g.fillRect(0, 0, w, h); return; }
+      g.beginPath(); g.rect(0, 0, w, h); g.arc(w / 2, h / 2, r, 0, Math.PI * 2, true); g.fill('evenodd');   // black everywhere except the circle
+      if (ring) {   // a glowing rim in the chapter colour
+        g.strokeStyle = color;
+        for (let k = 3; k >= 0; k--) { g.globalAlpha = k === 0 ? 0.95 : 0.16; g.lineWidth = (k === 0 ? 2 : 6 + k * 7) * Math.max(0.6, sc); g.beginPath(); g.arc(w / 2, h / 2, r, 0, Math.PI * 2); g.stroke(); }
+        g.globalAlpha = 1;
+      }
     };
     const to = irisDiameter(stage, size.w, size.h);
     const changed = last.current.stage !== stage || last.current.ms !== ms;
@@ -43,14 +54,9 @@ export function Iris({ stage, ms, color, ring }: { stage: IrisStage; ms: number;
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, [stage, ms, size.w, size.h]);
+  }, [stage, ms, size.w, size.h, sc, color, ring]);
 
-  return (
-    <div className="iris" style={{ '--c': color } as CSSProperties} aria-hidden>
-      <div ref={maskRef} className="iris-mask" style={{ background: '#000' }} />
-      {ring && <div ref={ringRef} className="iris-ring" />}
-    </div>
-  );
+  return <div className="iris" aria-hidden><canvas ref={cvRef} className="iris-canvas" /></div>;
 }
 
 /**

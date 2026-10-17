@@ -16,7 +16,7 @@ import JavaScriptObfuscator from 'javascript-obfuscator';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HOME_URL, HOSTS, LOCAL_HOSTS, SERVER_GATE } from './protect.config.mjs';
+import { HOME_URL, HOSTS, LOCAL_HOSTS, PROFILE, SERVER_GATE } from './protect.config.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = resolve(here, '..', 'dist');
@@ -55,12 +55,16 @@ const OPTIONS = {
   domainLockRedirectUrl: HOME_URL,
 };
 
+// phones: lighter scrambling, so there is less code to download and parse and nothing slows the game loops
+const LIGHT = { identifierNamesGenerator: 'mangled-shuffled', stringArrayEncoding: [], stringArrayThreshold: 0.5, stringArrayWrappersCount: 0 };
+const BIG = 700 * 1024;   // bytes
 const jsFiles = walk(dist).filter((f) => f.endsWith('.js'));
 let before = 0, after = 0;
 const t0 = Date.now();
 for (const f of jsFiles) {
   const src = readFileSync(f, 'utf8');
-  const opts = f.endsWith('protect.js') ? { ...OPTIONS, domainLock: [] } : OPTIONS;   // protect.js checks the host itself
+  let opts = f.endsWith('protect.js') ? { ...OPTIONS, domainLock: [] } : OPTIONS;   // protect.js checks the host itself
+  if (PROFILE === 'light') opts = { ...opts, ...LIGHT, ...(src.length > BIG ? { stringArray: false } : {}) };
   const out = JavaScriptObfuscator.obfuscate(src, opts).getObfuscatedCode();
   writeFileSync(f, out);
   before += src.length; after += out.length;

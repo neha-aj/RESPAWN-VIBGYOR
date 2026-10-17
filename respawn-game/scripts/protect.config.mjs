@@ -12,3 +12,8 @@ export const HOME_URL = 'https://vibgyor-ochre.vercel.app';
 /* Writes dist/middleware.js (a Vercel edge check that refuses other websites hotlinking your files
  * and stops levels being opened outside the game). Set false for a plain static deploy. */
 export const SERVER_GATE = true;
+
+/* How hard to scramble: 'full' (laptops) or 'light' (phones). 'light' keeps the scrambled names and hidden
+ * strings but skips the string encoding and leaves very large files (the Phaser-based RED level) as plain
+ * minified code, so a phone parses less and runs the same speed as before. */
+export const PROFILE = 'full';
