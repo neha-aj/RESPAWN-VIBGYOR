@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { BULLET_SPEED, C, LIVES, AMMO, TIME_LIMIT } from './config';
 import { Player } from './entities';
 import { VioletGame } from './logic';
-import { Field, Projectile, World, inside, type V2 } from './physics';
+import { Field, Projectile, World, ballisticAim, inside, type V2 } from './physics';
 
 /* ---------- helpers ---------- */
 function fly(world: World, pos: V2, ang: number, frames = 900) {
@@ -76,7 +76,7 @@ describe('game flow', () => {
       const ang = (sol.deg + da * s) * Math.PI / 180;
       g.aimPoint = { x: 2000 * Math.cos(ang) + g.player.rect.x, y: 2000 * Math.sin(ang) + g.player.rect.y };
       g.update(1 / 60);
-      const sh = g.player.shoulder(); g.aimPoint = { x: sh.x + Math.cos(ang) * 300, y: sh.y + Math.sin(ang) * 300 }; g.update(1 / 60);
+      const sh = g.player.shoulder(); g.aimPoint = { x: sh.x + Math.cos(ang) * 900, y: sh.y + Math.sin(ang) * 900 }; g.update(1 / 60);   // beyond reach: aim exactly along ang
       if (fly(openWorld(), g.player.muzzle(), g.player.aim)) { won = true; break; }
     }
     g.fire();
@@ -123,5 +123,22 @@ describe('violet-only palette', () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+});
+
+describe('aim guide', () => {
+  it('the shot passes through the crosshair (the circle sits on the dotted line)', () => {
+    const w = new World(), sh = { x: 620, y: 330 };
+    for (const t of [{ x: 300, y: 300 }, { x: 450, y: 180 }, { x: 700, y: 150 }, { x: 520, y: 250 }, { x: 330, y: 200 }]) {
+      const a = ballisticAim(sh, t), m = { x: sh.x + Math.cos(a) * 36, y: sh.y + Math.sin(a) * 36 };
+      const p = new Projectile(m, { x: Math.cos(a) * BULLET_SPEED, y: Math.sin(a) * BULLET_SPEED });
+      let near = Infinity;
+      for (let f = 0; f < 200 && p.alive; f++) { p.step(w); near = Math.min(near, Math.hypot(p.pos.x - t.x, p.pos.y - t.y)); if (p.bounces) break; }
+      expect({ t, a, near }).toSatisfy((v: { near: number }) => v.near < BULLET_SPEED / 2 + 1);   // within one frame of travel
+    }
+  });
+  it('falls back to a straight aim when the crosshair is out of reach', () => {
+    const sh = { x: 100, y: 300 }, t = { x: 2000, y: 100 };
+    expect(ballisticAim(sh, t)).toBeCloseTo(Math.atan2(t.y - sh.y, t.x - sh.x), 9);
   });
 });

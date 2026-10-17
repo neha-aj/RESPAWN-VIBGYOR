@@ -3,7 +3,7 @@
    gravity, sub-stepped motion, specular ricochets (invert vx on vertical
    surfaces, vy on horizontal ones), transformation fields, targets, door.
    ============================================================================ */
-import { DOOR_RECT, FIELDS, GRAVITY, MAX_BOUNCES, SOLIDS, H, W, type Rect } from './config';
+import { BULLET_SPEED, DOOR_RECT, FIELDS, GRAVITY, MAX_BOUNCES, SOLIDS, H, W, type Rect } from './config';
 
 export interface V2 { x: number; y: number }
 export const inside = (r: Rect, x: number, y: number) => r.x <= x && x < r.x + r.w && r.y <= y && y < r.y + r.h;
@@ -75,6 +75,45 @@ export class Projectile {
     if (!(this.pos.x > -50 && this.pos.x < W + 50 && this.pos.y > -50 && this.pos.y < H + 50)) this.alive = false;
     return ev;
   }
+}
+
+/**
+ * The launch angle that makes the bullet's gravity arc pass THROUGH the crosshair.
+ * A bullet sags under gravity, so firing straight at the crosshair drops below it and the dotted
+ * guide would never touch the circle. This solves for the (slightly raised) angle whose arc, using
+ * exactly Projectile.step()'s per-frame gravity, reaches the crosshair's x at the crosshair's y.
+ * `reach` is how far the muzzle sits from the shoulder along the aim. When the crosshair is out of
+ * range (or no arc reaches it) it falls back to aiming straight at it.
+ */
+export function ballisticAim(shoulder: V2, target: V2, reach = 36, speed = BULLET_SPEED): number {
+  const straight = Math.atan2(target.y - shoulder.y, target.x - shoulder.x);
+  const d = Math.hypot(target.x - shoulder.x, target.y - shoulder.y);
+  if (d < reach + 24 || d > 700) return straight;
+  /** How far the arc passes below (+) / above (-) the target when it reaches the target's x; NaN if it never gets there. */
+  const miss = (a: number) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    const mx = shoulder.x + c * reach, my = shoulder.y + s * reach;
+    const n = (target.x - mx) / (speed * c);               // frames to cover the horizontal distance
+    if (!(n > 0) || n > 140) return NaN;
+    return my + n * speed * s + (GRAVITY * n * (n + 1)) / 2 - target.y;   // y after n frames of Projectile.step()
+  };
+  let best: [number, number] | null = null;                 // the bracket nearest the straight line
+  const up = target.x >= shoulder.x ? -1 : 1;               // raising the aim: a smaller angle facing right, a larger one facing left
+  let prevA = straight - up * 0.05, prev = miss(prevA);
+  for (let u = -0.04; u <= 1.3; u += 0.01) {
+    const a = straight + up * u, m = miss(a);
+    if (Number.isFinite(prev) && Number.isFinite(m) && (prev > 0) !== (m > 0)) { best = [a, prevA]; break; }
+    prevA = a; prev = m;
+  }
+  if (!best) return straight;
+  let [lo, hi] = best;
+  const sLo = miss(lo) > 0;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2, m = miss(mid);
+    if (!Number.isFinite(m)) return straight;
+    if ((m > 0) === sLo) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
 }
 
 /** Dotted aiming guide: the gravity arc up to the first surface or field contact. */

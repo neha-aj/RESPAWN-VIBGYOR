@@ -143,7 +143,7 @@
 
 /* ---------- death: fallen, then respawn ---------- */
 .shield.death { cursor: default; background: rgba(0, 0, 0, 0); transition: background 800ms ease; }
-.shield.death.show { background: rgba(20, 0, 4, 0.72); }
+.shield.death.show { background: rgba(14, 0, 3, 0.9); }
 .fallen {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh; text-align: center; padding: 16px;
   animation: fade-in 500ms ease-out both;
@@ -191,3 +191,33 @@
 @keyframes studio-line { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes studio-name { from { opacity: 0; letter-spacing: 1.4em; } to { opacity: 1; } }
 @keyframes studio-out { to { opacity: 0; } }
+
+
+/* ---------- difficulty: EASY / HARD ---------- */
+.mi.mode .mode-lbl { min-width: 5.5em; }
+.mi.mode .mode-val { font-size: 0.8em; letter-spacing: 0.12em; }
+.mi.mode .mode-val.easy { color: #39FF14; text-shadow: 0 0 10px #39FF1466; }
+.mi.mode .mode-val.hard { color: #FF1E2D; text-shadow: 0 0 10px #FF1E2D66; }
+.mode-note {
+  margin-top: 3vh; padding: 12px 14px; border: 2px solid; background: rgba(0, 0, 0, 0.62); max-width: 460px;
+  font-size: clamp(8px, 0.8vw, 11px); line-height: 1.9; letter-spacing: 0.08em; color: #ccc;
+}
+.mode-note.easy { border-color: #39FF14; box-shadow: 4px 4px 0 #0b5c00; }
+.mode-note.hard { border-color: #FF1E2D; box-shadow: 4px 4px 0 #5c0008; }
+.mode-note b { font-weight: 400; margin-right: 6px; }
+.mode-note.easy b { color: #39FF14; }
+.mode-note.hard b { color: #FF1E2D; }
+.mode-note span { display: block; margin-top: 4px; }
+.mode-note u { text-decoration: none; color: #fff; }
+.mode-tag { display: inline-block; padding: 2px 6px; margin-right: 6px; font-size: 0.85em; color: #000; }
+.mode-tag.easy { background: #39FF14; }
+.mode-tag.hard { background: #FF1E2D; color: #fff; }
+.panel.how .rules + .rules { margin-top: 20px; padding-top: 18px; border-top: 2px dashed #444; }
+
+/* ---------- after a death on EASY: try again or skip ---------- */
+.fallen-choices { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 1vh; }
+.fallen-choices .pix-btn.on, .fallen-choices .pix-btn:focus-visible { background: #fff; color: #000; }
+.fallen-choices .pix-btn.go { box-shadow: 4px 4px 0 #39FF14, 8px 8px 0 #0b5c00; }
+.fallen-choices .pix-btn.pass { box-shadow: 4px 4px 0 #FFD400, 8px 8px 0 #6b5900; }
+.fallen-hint { margin: 0; font-size: clamp(8px, 0.8vw, 11px); letter-spacing: 0.22em; color: #888; }
+.check-list { list-style: none; margin: 0; padding: 0; max-width: 720px; display: flex; flex-direction: column; gap: 12px; font-size: clamp(9px, 1vw, 13px); line-height: 1.8; letter-spacing: 0.08em; color: #FFD400; }

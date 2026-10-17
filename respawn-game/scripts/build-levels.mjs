@@ -2,6 +2,7 @@
  *   npm run levels
  *
  *   --skip-build     only copy existing dist/ folders (faster when nothing changed)
+ *   --only=<id>      just that level, e.g. --only=violet
  *
  * Each copied index.html gets the sound bridge (public/respawn-audio.js) first in its <head>,
  * so the menu's SOUND / MASTER VOLUME settings reach the level.
@@ -25,8 +26,10 @@ const LEVELS = {
   red: 'level7-red-web',
 };
 const skipBuild = process.argv.includes('--skip-build');
+const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);   // e.g. --only=violet
 
 for (const [id, folder] of Object.entries(LEVELS)) {
+  if (only && only !== id) continue;
   const dir = join(repo, folder);
   if (!skipBuild) {
     if (!existsSync(join(dir, 'node_modules'))) {

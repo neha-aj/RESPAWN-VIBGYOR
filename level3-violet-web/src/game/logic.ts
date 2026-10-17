@@ -4,7 +4,7 @@
    ============================================================================ */
 import { AMMO, BULLET_SPEED, C, DRONES, LIVES, TIME_LIMIT } from './config';
 import { Enemy, Player, type Input } from './entities';
-import { Projectile, type Ev, type V2, World } from './physics';
+import { ballisticAim, Projectile, type Ev, type V2, World } from './physics';
 
 export type State = 'menu' | 'rules' | 'play' | 'pause' | 'over' | 'won';
 export type Sound = 'gun' | 'ping' | 'zap' | 'pew' | 'boom' | 'hurt' | 'door' | 'click' | 'empty';
@@ -95,6 +95,7 @@ export class VioletGame {
     const pl = this.player;
     this.refreshAim();
     pl.update(this.input, this.world, ts);
+    this.refreshAim();   // Thanos has moved: re-aim from where he now stands, so the guide and the shot agree
     for (const e of this.enemies) if (e.alive && e.update(ts, pl.center(), this.eshots)) this.sound('pew', 0.5);
     for (const b of this.shots) {
       b.trail.push({ ...b.pos }); if (b.trail.length > 16) b.trail.shift();
@@ -116,11 +117,14 @@ export class VioletGame {
     if (this.ammo === 0 && this.shots.length === 0) this.lose('OUT OF VECTOR BULLETS');
   }
 
-  /** Point Thanos's gauntlet at the aim point. */
+  /**
+   * Point Thanos's gauntlet so the shot's arc passes through the crosshair (the dotted guide, the
+   * muzzle and the bullet all use this one angle, so the circle always sits on the dotted line).
+   */
   refreshAim() {
-    const pl = this.player, sh = pl.shoulder();
-    pl.aim = Math.atan2(this.aimPoint.y - sh.y, this.aimPoint.x - sh.x);
-    pl.facing = this.aimPoint.x >= pl.rect.x + pl.rect.w / 2 ? 1 : -1;
+    const pl = this.player;
+    pl.facing = this.aimPoint.x >= pl.rect.x + pl.rect.w / 2 ? 1 : -1;   // first: the shoulder depends on it
+    pl.aim = ballisticAim(pl.shoulder(), this.aimPoint);
   }
 
   get dronesLeft() { return this.enemies.filter((e) => e.alive).length; }

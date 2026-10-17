@@ -4,7 +4,10 @@
  * public/respawn-audio.js, which reads the same key (and hears changes through the
  * `storage` event), so SOUND and MASTER VOLUME reach the levels too. */
 
+export type Difficulty = 'easy' | 'hard';
+
 export interface Settings {
+  difficulty: Difficulty;   // easy: retry the level you died in (and may skip it) · hard: checkpoints
   sound: boolean;      // everything on / off
   master: number;      // 0..1, the whole game, levels included
   music: number;       // 0..1, the shell's intro and menu music
@@ -13,11 +16,14 @@ export interface Settings {
 }
 
 export const KEY = 'respawn:settings';
-const DEFAULTS: Settings = { sound: true, master: 0.9, music: 0.8, effects: 0.8, crt: true };
+const DEFAULTS: Settings = { difficulty: 'easy', sound: true, master: 0.9, music: 0.8, effects: 0.8, crt: true };
 
 function load(): Settings {
-  try { return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings>) }; }
-  catch { return { ...DEFAULTS }; }
+  try {
+    const s = { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings>) };
+    if (s.difficulty !== 'easy' && s.difficulty !== 'hard') s.difficulty = DEFAULTS.difficulty;
+    return s;
+  } catch { return { ...DEFAULTS }; }
 }
 
 let current = load();

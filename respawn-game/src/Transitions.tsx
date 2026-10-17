@@ -1,8 +1,57 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { irisDiameter, viewSize, type IrisStage } from './display';
 import { SPECTRUM } from './sequence';
 import { sfx } from './sfx';
 
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
+
+/**
+ * The circle wipe. A black screen with a round hole whose diameter is tweened in real pixels
+ * (from the window's actual size, re-read on resize and zoom), so the circle always opens past
+ * every corner and closes to nothing on any screen. A glowing ring in the chapter colour rides the rim.
+ */
+const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+export function Iris({ stage, ms, color, ring }: { stage: IrisStage; ms: number; color: string; ring: boolean }) {
+  const maskRef = useRef<HTMLDivElement>(null), ringRef = useRef<HTMLDivElement>(null);
+  const cur = useRef<number | null>(null);   // diameter now, px
+  const last = useRef({ stage, ms });
+  const [size, setSize] = useState(viewSize);
+
+  useEffect(() => {
+    const f = () => setSize(viewSize());
+    window.addEventListener('resize', f); window.visualViewport?.addEventListener('resize', f); document.addEventListener('fullscreenchange', f);
+    return () => { window.removeEventListener('resize', f); window.visualViewport?.removeEventListener('resize', f); document.removeEventListener('fullscreenchange', f); };
+  }, []);
+
+  useEffect(() => {
+    const paint = (d: number) => {
+      cur.current = d;
+      const m = maskRef.current, r = ringRef.current;
+      if (m) m.style.background = d < 1 ? '#000' : `radial-gradient(circle at 50% 50%, transparent ${d / 2}px, #000 ${d / 2 + 0.75}px)`;
+      if (r) { r.style.width = r.style.height = `${Math.max(0, d)}px`; r.style.opacity = d < 1 ? '0' : '1'; }
+    };
+    const to = irisDiameter(stage, size.w, size.h);
+    const changed = last.current.stage !== stage || last.current.ms !== ms;
+    last.current = { stage, ms };
+    if (ms <= 0 || cur.current === null || !changed) { paint(to); return; }   // jump (also on a resize mid-way)
+    const from = cur.current, t0 = performance.now();
+    let id = 0;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / ms);
+      paint(from + (to - from) * ease(p));
+      if (p < 1) id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [stage, ms, size.w, size.h]);
+
+  return (
+    <div className="iris" style={{ '--c': color } as CSSProperties} aria-hidden>
+      <div ref={maskRef} className="iris-mask" style={{ background: '#000' }} />
+      {ring && <div ref={ringRef} className="iris-ring" />}
+    </div>
+  );
+}
 
 /**
  * The spectrum card between chapters: the V-I-B-G-Y-O-R strip, colours already won lit,

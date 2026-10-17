@@ -19,7 +19,7 @@ const shell = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd, env) => execSync(cmd, { cwd: shell, stdio: 'inherit', env: { ...process.env, ...env } });
 
 if (process.argv.includes('--levels')) run('npm run levels');
-run('npm run build');
+run('npm run build:release');   // build, then scramble + lock the code and add the security headers
 
 const missing = LEVELS.filter((id) => !existsSync(join(shell, 'dist', 'levels', id, 'index.html')));
 if (missing.length) {

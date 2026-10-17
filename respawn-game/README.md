@@ -129,3 +129,41 @@ After RED, the whole strip lights up band by band and rings out, then the outro 
 - `scripts/build-levels.mjs` (`npm run levels`) builds every level folder and copies it
   into `public/levels/`. Run it again after changing any level. `--skip-build` only re-copies.
 - `public/img/vibgyor.webp` is the picture used by the logo, the clips, the menu and the roadmap.
+
+## Difficulty: EASY and HARD
+
+Chosen on the main menu (MODE row: ENTER, LEFT/RIGHT or a tap flips it; the box under it explains the
+chosen mode, and HOW IT WORKS and the card before BnW show the rules). Saved in the browser as
+`difficulty` in `respawn:settings`. EASY is the default. The mode is fixed for a whole run.
+
+- **EASY**: no checkpoints. Die in any level and you restart *that* level from its beginning (die at INDIGO,
+  wake at INDIGO). After every death the player chooses **TRY AGAIN** or **SKIP TO <next level>** (skipping
+  RED goes to the ending). Keys: LEFT/RIGHT choose, ENTER select, R retry, N skip; or click/tap. Input is
+  ignored for the first 0.7 s so keys mashed while dying cannot pick for the player.
+- **HARD**: the checkpoint rules above, unchanged.
+
+The logic is in `run()` / `playChapter()` in `src/App.tsx`; the death screen is `FallenOverlay` in `src/Menu.tsx`.
+
+## Display check and the circle wipe
+
+The circle wipe between levels (the iris, `Iris` in `src/Transitions.tsx`) is now tweened in real pixels from
+the window's actual size (re-read on resize, zoom and fullscreen) instead of a giant box-shadow in viewport units,
+which rendered wrongly on some laptops. Before every game (after the rules card) `checkDisplay()` in
+`src/display.ts` measures the open and shut circle at real size, checks the window size, browser zoom and that
+animation frames are running. If something is wrong, a DISPLAY CHECK screen explains it (CHECK AGAIN / PLAY ANYWAY).
+
+## Protection (release builds)
+
+`npm run deploy` (or `npm run build:release`) builds, then runs `scripts/protect.mjs` on `dist/`:
+
+1. every script is scrambled with javascript-obfuscator and locked to the hosts in `scripts/protect.config.mjs`
+   (a re-hosted copy shows "THIS IS NOT THE OFFICIAL GAME" and a link back to the real one); localhost still works
+2. `protect.js` (from `scripts/protect-client.js`) goes first on every page: host lock, no embedding in other
+   sites, no right-click / View Source / Save / dev-tools shortcuts, no selecting or dragging
+3. source maps are removed
+4. `vercel.json` (no framing, no sniffing, no indexing, HTTPS only) and `middleware.js` (refuses other sites
+   hotlinking scripts, levels, pictures and videos, and stops a level opening outside the game)
+
+If you move to your own domain, add it to `HOSTS` in `scripts/protect.config.mjs`. Plain `npm run build` and
+`PLAY.bat` stay unprotected and readable for development. This deters copying; it cannot make a browser game
+impossible to copy, because the browser must receive the code and videos to run them.
