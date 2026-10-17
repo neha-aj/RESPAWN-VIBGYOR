@@ -59,11 +59,20 @@ export default function BlueLevel({ previousOrder, onComplete, onDeath }: { prev
 
   const mainRef = useRef<HTMLElement>(null);
   const [frame, setFrame] = useState({ w: 960, h: 540 });
+  const phone = useMemo(() => document.documentElement.classList.contains('phone'), []);   // set by respawn-touch.js inside the phone build
+  const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const el = mainRef.current; if (!el) return;
-    const fit = () => { const r = el.getBoundingClientRect(); const w = Math.max(320, Math.min(r.width - 24, ((r.height - 24) * 16) / 9)); setFrame({ w, h: (w * 9) / 16 }); };
+    const fit = () => {
+      const r = el.getBoundingClientRect();
+      if (phone) {   // the whole screen is the frame (so panels get all the room); the picture sits centred inside it at 16:9
+        const w = Math.min(r.width, (r.height * 16) / 9);
+        setFrame({ w: r.width, h: r.height }); setBox({ w, h: (w * 9) / 16 }); return;
+      }
+      const w = Math.max(320, Math.min(r.width - 24, ((r.height - 24) * 16) / 9)); setFrame({ w, h: (w * 9) / 16 });
+    };
     fit(); const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
-  }, []);
+  }, [phone]);
   const desktop = useMemo(() => !window.matchMedia || window.matchMedia('(any-pointer: fine)').matches, []);
 
   useEffect(() => {
@@ -216,7 +225,8 @@ export default function BlueLevel({ previousOrder, onComplete, onDeath }: { prev
       />
       <main ref={mainRef} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         <div className="pixel-frame relative" style={{ width: frame.w, height: frame.h }}>
-          <canvas ref={canvasRef} className="pixelated absolute inset-0 h-full w-full cursor-pointer" aria-label="Underwater research chamber. Thanos stands at the bottom of the room." />
+          <canvas ref={canvasRef} className={`pixelated absolute cursor-pointer ${phone ? '' : 'inset-0 h-full w-full'}`}
+            style={phone ? { left: '50%', top: '50%', width: box.w, height: box.h, transform: 'translate(-50%, -50%)' } : undefined} aria-label="Underwater research chamber. Thanos stands at the bottom of the room." />
 
           <ThanosPortrait canvasRef={setPortrait} expression={snap?.expression ?? 'determined'} critical={playing && remaining < 10_000} />
           {phase !== 'intro' && <MessageToast message={snap?.message ?? null} shifted={!!snap?.consoleOpen} bottom={!!station} />}

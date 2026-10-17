@@ -327,9 +327,7 @@ export default function App() {
         </div>
       )}
 
-      {iris && (IS_TOUCH
-        ? <div className="iris-fade" style={{ opacity: iris.d === IRIS_OPEN ? 0 : iris.d === IRIS_PEEK ? 0.85 : 1, transitionDuration: `${iris.ms}ms` }} />
-        : <Iris stage={iris.d} ms={iris.ms} color={iris.color} ring={iris.ring} />)}
+      {iris && <Iris stage={iris.d} ms={iris.ms} color={iris.color} ring={iris.ring} />}
 
       {video && (
         <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} skipAfter={video.skipAfter} onEnd={() => signal('videoEnd')} />

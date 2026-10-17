@@ -33,3 +33,26 @@ input[type='text']::-webkit-outer-spin-button { -webkit-appearance: none; margin
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- phone layout (the full game adds html.phone on phones; see respawn-touch.js) ---------- */
+html.phone header { height: 44px; padding: 0 8px; gap: 8px; }
+html.phone header > div:first-child { gap: 8px; }
+html.phone header .font-pixel { font-size: 13px; }
+html.phone [role='timer'] { min-width: 120px; padding: 1px 8px; }
+html.phone [role='timer'] span { font-size: 17px; }
+html.phone header button { height: 32px; padding: 0 8px; }
+html.phone canvas.block { width: 48px !important; height: 48px !important; }
+html.phone [role='dialog'] { padding: 6px; }
+html.phone [role='dialog'] > div { padding: 12px 14px; width: min(640px, 78%); max-height: 100%; }
+html.phone [role='dialog'] dd { font-size: 21px; line-height: 1.25; }
+html.phone [role='dialog'] dt { font-size: 11px; }
+html.phone [role='dialog'] h2 { font-size: 14px; }
+html.phone [role='dialog'] p { font-size: 20px; }
+html.phone [role='dialog'] button { padding: 8px 12px; font-size: 10px; }
+html.phone .intro-root { overflow-y: auto; justify-content: flex-start; padding: 10px 90px; }
+html.phone .intro-root h1 { font-size: 34px; }
+html.phone .intro-root p { margin-top: 6px; font-size: 18px; }
+html.phone .intro-root .flex-col { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+html.phone .intro-root .flex-col button { width: auto; padding: 8px 12px; }
+html.phone .intro-hint { display: none; }
+html.phone .absolute.right-0.top-1\/2 { top: 30%; }

@@ -9,7 +9,7 @@ import { Overlay, PixelButton } from './ui';
 
 export function LevelIntro({ onStart, onRules, onExit, continueLevel, onContinue }: { onStart: () => void; onRules: () => void; onExit: () => void; continueLevel?: LevelNo | null; onContinue?: () => void }) {
   return (
-    <motion.div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-gradient-to-b from-abyss/60 via-abyss/80 to-abyss/95 p-6 text-center"
+    <motion.div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-gradient-to-b from-abyss/60 via-abyss/80 to-abyss/95 p-6 text-center intro-root"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.h1 className="font-pixel text-[clamp(40px,7vw,84px)] leading-none text-cyan drop-shadow-[0_0_18px_#258BFF]"
         initial={{ y: -10 }} animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}>
@@ -31,7 +31,7 @@ export function LevelIntro({ onStart, onRules, onExit, continueLevel, onContinue
         <PixelButton variant="ghost" onClick={onRules} className="w-64"><BookOpen size={12} className="mr-2 inline" aria-hidden />Rules</PixelButton>
         <PixelButton variant="ghost" onClick={onExit} className="w-64"><LogOut size={12} className="mr-2 inline" aria-hidden />Exit</PixelButton>
       </div>
-      <p className="mt-6 font-term text-lg text-primary">← → / A D move · Space jump · E interact · Esc pause</p>
+      <p className="mt-6 font-term text-lg text-primary intro-hint">← → / A D move · Space jump · E interact · Esc pause</p>
     </motion.div>
   );
 }
