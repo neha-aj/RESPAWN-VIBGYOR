@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { audio } from './audio';
 import { LetterReveal } from './LetterReveal';
 import { LogoIntro } from './LogoIntro';
 import { StudioSplash } from './Studio';
-import { BootScreen, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
+import { BootScreen, DisplayCheck, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
+import { checkDisplay, type IrisStage } from './display';
 import { music } from './music';
 import {
   chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, INTRO_VIDEO_MOBILE, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
@@ -12,7 +13,7 @@ import { settings } from './settings';
 import { sfx } from './sfx';
 import { enterFullscreen, IS_TOUCH } from './touch';
 import { TouchControls } from './TouchControls';
-import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
+import { Bloom, ContinueHint, Iris, SpectrumCard, VideoPlayer } from './Transitions';
 
 /*
  * RESPAWN: the whole game, start to finish.
@@ -23,8 +24,9 @@ import { Bloom, ContinueHint, SpectrumCard, VideoPlayer } from './Transitions';
  *   ─► after RED: the strip lights up ─► outro + credits video (yours, when added) ─► menu
  *
  * Each level runs in its own iframe and posts { type: 'respawn:complete' } when won and
- * { type: 'respawn:death' } when lost (its Game Over). A death sends Thanos back to the last
- * checkpoint reached (see sequence.ts). `?chapter=<id>` jumps straight into a level.
+ * { type: 'respawn:death' } when lost (its Game Over). On HARD a death sends Thanos back to the last
+ * checkpoint reached (see sequence.ts). On EASY there are no checkpoints: a death restarts that very
+ * level, and the player may instead skip on to the next one. `?chapter=<id>` jumps straight into a level.
  */
 
 /**
@@ -47,19 +49,20 @@ async function videoExists(url: string) {
   catch { return false; }
 }
 
-type Signal = 'complete' | 'death' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
-type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'stopped' | 'end' | null;
+type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
+type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'check' | 'stopped' | 'end' | null;
 const CANCEL = Symbol('cancel');
 
-interface Iris { d: string; ms: number; color: string; ring: boolean }
-const IRIS_OPEN = '165vmax', IRIS_PEEK = '20vmin', IRIS_SHUT = '0px';
+interface IrisState { d: IrisStage; ms: number; color: string; ring: boolean }
+const IRIS_OPEN: IrisStage = 'open', IRIS_PEEK: IrisStage = 'peek', IRIS_SHUT: IrisStage = 'shut';
 
 export default function App() {
   const [scene, setScene] = useState<Scene>(null);
   const [level, setLevel] = useState<{ idx: number; visible: boolean; run: number } | null>(null);
-  const [iris, setIris] = useState<Iris | null>({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
+  const [iris, setIris] = useState<IrisState | null>({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
   const [won, setWon] = useState<{ hold: number; color: string } | null>(null);
-  const [fallen, setFallen] = useState<{ back: LevelId; show: boolean } | null>(null);
+  const [fallen, setFallen] = useState<{ back: LevelId; show: boolean; easy: boolean; next: string | null } | null>(null);
+  const [check, setCheck] = useState<string[]>([]);
   const [card, setCard] = useState<{ band: number; leaving: boolean; finale?: boolean } | null>(null);
   const [reveal, setReveal] = useState<{ band: number; key: number; fading: boolean } | null>(null);
   const [respawn, setRespawn] = useState<{ band: number; leaving: boolean } | null>(null);
@@ -153,7 +156,7 @@ export default function App() {
     }
 
     /** One chapter. Returns how it ended. `back` is where a death would send Thanos. */
-    async function playChapter(i: number, first: boolean, respawning: boolean, back: LevelId): Promise<'complete' | 'death'> {
+    async function playChapter(i: number, first: boolean, respawning: boolean, back: LevelId, easy: boolean): Promise<'complete' | 'death' | 'skip'> {
       const ch = CHAPTERS[i], run = ++runs;
       clear('complete', 'death');
 
@@ -197,17 +200,21 @@ export default function App() {
       const how = await waitAny(['complete', 'death']);
       if (how === 'death') {
         // the level's own Game Over shows for a moment; the shield keeps its retry buttons and keys away
-        setFallen({ back, show: false });
+        const next = CHAPTERS[i + 1]?.name ?? null;
+        setFallen({ back, show: false, easy, next });
         await nextFrame();
         shieldRef.current?.focus();
         await sleep(1300);
-        setFallen({ back, show: true }); sfx.fallen();
-        await sleep(2900);
+        clear('retry', 'skip');
+        setFallen({ back, show: true, easy, next }); sfx.fallen();
+        let pick: 'death' | 'skip' = 'death';
+        if (easy) pick = (await waitAny(['retry', 'skip'])) === 'skip' ? 'skip' : 'death';   // EASY: the player chooses
+        else await sleep(2900);
         await closeOn('#FF1E2D');
         setFallen(null);
         setLevel(null);
         await sleep(260);
-        return 'death';
+        return pick;
       }
       // hold on the level's own victory screen; the shield stops clicks reaching its buttons
       continueFrom.current = performance.now() + 1200;
@@ -223,16 +230,17 @@ export default function App() {
       return 'complete';
     }
 
-    /** BnW and the seven colours, with checkpoints, then the finale. */
+    /** BnW and the seven colours (HARD: with checkpoints; EASY: retry or skip), then the finale. */
     async function run(start: number) {
+      const easy = settings.get().difficulty === 'easy';   // fixed for the whole run
       let reached = reachedBy(start - 1), respawning = false, first = true;
       for (let i = start; i < CHAPTERS.length;) {
-        // a checkpoint is yours the moment you arrive at it
+        // HARD: a checkpoint is yours the moment you arrive at it
         if (CHECKPOINTS.includes(CHAPTERS[i].id)) reached = CHAPTERS[i].id;
-        const how = await playChapter(i, first, respawning, respawnAt(reached));
+        const how = await playChapter(i, first, respawning, easy ? CHAPTERS[i].id : respawnAt(reached), easy);
         first = false;
-        if (how === 'death') { i = chapterIndex(respawnAt(reached)); respawning = true; continue; }
-        respawning = false; i++;
+        if (how === 'death') { if (!easy) i = chapterIndex(respawnAt(reached)); respawning = true; continue; }   // EASY: same level again
+        respawning = false; i++;   // won it, or (EASY) chose to skip it
       }
       // Every colour is back: the full strip lights up and rings out…
       setCard({ band: 6, leaving: false, finale: true });
@@ -276,6 +284,13 @@ export default function App() {
         }
         clear('rulesGo'); setScene('rules');
         await waitFor('rulesGo');
+        // the display check, before every game: the circle wipe and the window must be sound
+        for (;;) {
+          const issues = await checkDisplay();
+          if (!issues.length) break;
+          setCheck(issues); clear('checkGo', 'checkRetry'); setScene('check');
+          if ((await waitAny(['checkGo', 'checkRetry'])) === 'checkGo') break;
+        }
         music.stop(1.8);
         setIris({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
         setScene(null);
@@ -288,10 +303,9 @@ export default function App() {
   }, []);
 
   const ch = level ? CHAPTERS[level.idx] : null;
-  const irisStyle = iris && ({ '--d': iris.d, '--ms': `${iris.ms}ms`, '--c': iris.color } as CSSProperties);
   // phones: the on-screen controls, only while a level is actually being played
   const touchOn = IS_TOUCH && !!ch && level!.visible && !won && !fallen && !iris && !card && !reveal && !respawn && !video && !scene;
-  const shellScene = scene === 'studio' || scene === 'menu' || scene === 'rules' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
+  const shellScene = scene === 'studio' || scene === 'menu' || scene === 'rules' || scene === 'check' || scene === 'boot' || scene === 'stopped' || scene === 'end' || !!card || !!respawn;
 
   return (
     <div className="stage">
@@ -309,13 +323,13 @@ export default function App() {
       )}
       {fallen && (
         <div ref={shieldRef} tabIndex={-1} className={`shield death${fallen.show ? ' show' : ''}`}>
-          {fallen.show && <FallenOverlay back={fallen.back} />}
+          {fallen.show && <FallenOverlay back={fallen.back} easy={fallen.easy} next={fallen.next} onRetry={() => signal('retry')} onSkip={() => signal('skip')} />}
         </div>
       )}
 
       {iris && (IS_TOUCH
         ? <div className="iris-fade" style={{ opacity: iris.d === IRIS_OPEN ? 0 : iris.d === IRIS_PEEK ? 0.85 : 1, transitionDuration: `${iris.ms}ms` }} />
-        : <div className={`iris${iris.ring ? ' ring' : ''}`} style={irisStyle!} />)}
+        : <Iris stage={iris.d} ms={iris.ms} color={iris.color} ring={iris.ring} />)}
 
       {video && (
         <VideoPlayer key={video.key} src={video.src} color={video.color} fading={video.fading} skipAfter={video.skipAfter} onEnd={() => signal('videoEnd')} />
@@ -332,6 +346,7 @@ export default function App() {
       {scene === 'logo' && <LogoIntro onDone={() => signal('logoDone')} />}
       {scene === 'menu' && <MainMenu onStart={() => signal('start')} onStop={() => signal('stop')} />}
       {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
+      {scene === 'check' && <DisplayCheck issues={check} onGo={() => signal('checkGo')} onRetry={() => signal('checkRetry')} />}
       {scene === 'stopped' && <StoppedScreen onBack={() => signal('back')} />}
       {scene === 'end' && <EndScreen onMenu={() => signal('endMenu')} />}
 

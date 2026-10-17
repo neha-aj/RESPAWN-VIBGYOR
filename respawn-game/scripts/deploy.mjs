@@ -1,4 +1,4 @@
-/* Builds the full game and puts it live on Vercel (project "vibgyor"). Run from respawn-game/:
+/* Builds the full game and puts it live on Vercel (project "vibgyor-mobile"). Run from respawn-game/:
  *   npm run deploy
  *
  *   --levels     rebuild every level first (npm run levels), when a level's code has changed
@@ -12,14 +12,14 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERCEL_PROJECT = { VERCEL_ORG_ID: 'team_9VkKRu8RLFp9eU5Evya5cZOS', VERCEL_PROJECT_ID: 'prj_uGkBfZqYbuquoreiKc2G5PvdgEwy' };
+const VERCEL_PROJECT = { VERCEL_ORG_ID: 'team_9VkKRu8RLFp9eU5Evya5cZOS', VERCEL_PROJECT_ID: 'prj_SCLulGZY2jzXtKnJh97OM1GqVpRc' };
 const LEVELS = ['violet', 'indigo', 'blue', 'green', 'yellow', 'orange', 'red'];
 
 const shell = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const run = (cmd, env) => execSync(cmd, { cwd: shell, stdio: 'inherit', env: { ...process.env, ...env } });
 
 if (process.argv.includes('--levels')) run('npm run levels');
-run('npm run build');
+run('npm run build:release');   // build, then scramble + lock the code and add the security headers
 
 const missing = LEVELS.filter((id) => !existsSync(join(shell, 'dist', 'levels', id, 'index.html')));
 if (missing.length) {
@@ -29,4 +29,4 @@ if (missing.length) {
 
 // Upload the built dist/ as-is (no build on Vercel's side) and make it the live site.
 run('npx --yes vercel@64 deploy dist --prod --yes', VERCEL_PROJECT);
-console.log('\nLive at https://vibgyor-ochre.vercel.app');
+console.log('\nLive at https://vibgyor-mobile.vercel.app');
