@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { PANELS, PIC_URL } from './art';
-import { CHECKPOINT_RULES, CHECKPOINTS, RED_DEATHS, SPECTRUM, type LevelId } from './sequence';
+import { save } from './save';
+import { CHAPTERS, chapterIndex, CHECKPOINT_RULES, CHECKPOINTS, RED_DEATHS, SPECTRUM, type LevelId } from './sequence';
 import { settings, type Difficulty, type Settings } from './settings';
 import { sfx } from './sfx';
 
@@ -134,7 +135,7 @@ function Row({ i, sel, setSel, onClick, children, className = '' }: { i: number;
   );
 }
 
-export function MainMenu({ onStart, onStop }: { onStart: () => void; onStop: () => void }) {
+export function MainMenu({ onStart, onContinue, onStop }: { onStart: () => void; onContinue: () => void; onStop: () => void }) {
   const [view, setView] = useState<'main' | 'settings' | 'how'>('main');
   const mode = useMode();
   return (
@@ -144,7 +145,7 @@ export function MainMenu({ onStart, onStop }: { onStart: () => void; onStop: () 
       <div className={`menu-wrap${view === 'how' ? ' wide' : ''}`}>
         <div className="menu-head"><Title /></div>
         <div className="menu-body">
-          {view === 'main' && <MainList onStart={onStart} onStop={onStop} open={setView} />}
+          {view === 'main' && <MainList onStart={onStart} onContinue={onContinue} onStop={onStop} open={setView} />}
           {view === 'settings' && <SettingsList back={() => setView('main')} />}
           {view === 'how' && <HowItWorks back={() => setView('main')} />}
         </div>
@@ -159,21 +160,27 @@ export function MainMenu({ onStart, onStop }: { onStart: () => void; onStop: () 
 }
 
 let lastMain = 0;
-function MainList({ onStart, onStop, open }: { onStart: () => void; onStop: () => void; open: (v: 'settings' | 'how') => void }) {
+function MainList({ onStart, onContinue, onStop, open }: { onStart: () => void; onContinue: () => void; onStop: () => void; open: (v: 'settings' | 'how') => void }) {
   const mode = useMode();
+  // a saved run puts CONTINUE at the top, showing where it picks up and in which mode
+  const [saved] = useState(save.get);
+  const items = saved ? [{ id: 'continue', label: 'CONTINUE' }, ...MAIN] : MAIN;
   const toggle = () => settings.set({ difficulty: settings.get().difficulty === 'easy' ? 'hard' : 'easy' });
   const pick = (i: number) => {
-    const id = MAIN[i].id; sfx.select();
-    if (id === 'start') onStart(); else if (id === 'stop') onStop(); else if (id === 'mode') toggle(); else open(id as 'settings' | 'how');
+    const id = items[i].id; sfx.select();
+    if (id === 'continue') onContinue(); else if (id === 'start') onStart(); else if (id === 'stop') onStop(); else if (id === 'mode') toggle(); else open(id as 'settings' | 'how');
   };
-  const [sel, setSel] = useList(MAIN.length, pick, undefined, (i) => { if (MAIN[i].id === 'mode') { toggle(); sfx.move(); } }, lastMain);
+  const [sel, setSel] = useList(items.length, pick, undefined, (i) => { if (items[i].id === 'mode') { toggle(); sfx.move(); } }, Math.min(lastMain, items.length - 1));
   lastMain = sel;   // coming back from SETTINGS / HOW IT WORKS keeps the cursor where it was
+  const at = saved ? CHAPTERS[chapterIndex(saved.chapter)] : null;
   return (
     <>
       <ul className="menu-list" role="menu">
-        {MAIN.map((m, i) => (
+        {items.map((m, i) => (
           <Row key={m.id} i={i} sel={sel} setSel={setSel} onClick={() => { setSel(i); pick(i); }} className={m.id}>
-            {m.id === 'mode' ? <><span className="mode-lbl">MODE</span><span className={`mode-val ${mode}`}>◀ {mode.toUpperCase()} ▶</span></> : m.label}
+            {m.id === 'mode' ? <><span className="mode-lbl">MODE</span><span className={`mode-val ${mode}`}>◀ {mode.toUpperCase()} ▶</span></>
+              : m.id === 'continue' && at && saved ? <>CONTINUE <span className="cont-at" style={{ color: at.color }}>{at.name} · {saved.mode.toUpperCase()}</span></>
+                : m.label}
           </Row>
         ))}
       </ul>

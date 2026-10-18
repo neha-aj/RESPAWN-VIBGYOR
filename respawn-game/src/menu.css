@@ -75,6 +75,8 @@
 .mi.on .cursor { visibility: visible; animation: blink 0.8s steps(1) infinite; }
 .mi.start.on { color: #39FF14; text-shadow: 3px 3px 0 #0b5c00, 0 0 16px #39FF1488; }
 .mi.stop.on { color: #FF1E2D; text-shadow: 3px 3px 0 #5c0008; }
+.mi.continue.on { color: #FFD400; text-shadow: 3px 3px 0 #6b5900, 0 0 16px #FFD40088; }
+.mi .cont-at { margin-left: 0.6em; font-size: 0.6em; letter-spacing: 0.12em; text-shadow: none; opacity: 0.9; }
 .panel { background: rgba(0, 0, 0, 0.72); border: 3px solid #fff; box-shadow: 6px 6px 0 #6A4BFF; padding: 22px 24px; max-height: 64vh; overflow: auto; }
 .panel h2, .rules-card h2, .menu-road h2 { margin: 0 0 18px; font-size: clamp(11px, 1.2vw, 16px); font-weight: 400; letter-spacing: 0.3em; }
 .menu-list.settings { gap: 1.6vh; }

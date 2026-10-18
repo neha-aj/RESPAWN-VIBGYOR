@@ -324,7 +324,7 @@ function CreditsPage() {
         ))}
       </div>
       <footer className="fin-foot">
-        <p>RESPAWN is a non-commercial fan work by SNaP studios (Shreekanth, Neha and Poojith).</p>
+        <p>VIBGYOR is a non-commercial fan work by SNaP studios (Shreekanth, Neha and Poojith).</p>
         <p>It is not affiliated with, sponsored or endorsed by Marvel, Disney, Fujiko-Pro or any other rights holder.</p>
         <p>No copyright infringement is intended. All characters and trademarks belong to their respective owners.</p>
       </footer>

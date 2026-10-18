@@ -78,6 +78,20 @@ levels first. The first time on a computer, sign in once with `npx vercel login`
 Laptops only for now: every level is played with the keyboard, so phones can open the page but
 can't play it yet.
 
+## Saved progress, fullscreen and the link preview
+
+- **Saved progress**: the run is saved (in the browser, `respawn:save`) as each level begins, so closing the tab
+  or refreshing costs nothing. The main menu then shows **CONTINUE** with the level and mode. EASY resumes at that
+  level; HARD resumes at the last checkpoint reached, as a death would (BnW stays BnW). START begins a new run,
+  and reaching the ending clears the save. The logic is in `src/save.ts`.
+- **Fullscreen**: the PRESS ANY KEY screen switches the browser to fullscreen (browsers only allow it right after
+  a key press or click). If the browser refuses, the game carries on in the window; SETTINGS can still toggle it.
+- **Credits video preload**: 8 s into RED the end-credits video is downloaded in the background, so it starts
+  without buffering. If it is not in yet when the credits begin, it streams as before.
+- **Name, icon and link preview**: the tab reads VIBGYOR with the rainbow V icon (`public/favicon.ico`,
+  `icon-*.png`, `apple-touch-icon.png`). Shared links show the VIBGYOR title picture (`public/img/og.jpg`) via the
+  `og:` / `twitter:` tags in `index.html`.
+
 ## Checkpoints
 
 Checkpoints are **BLUE**, **GREEN** and **RED**. A checkpoint counts as soon as Thanos reaches

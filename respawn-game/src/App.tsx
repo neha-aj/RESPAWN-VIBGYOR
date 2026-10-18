@@ -10,6 +10,7 @@ import { music } from './music';
 import {
   chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, OUTRO_SKIP_AFTER, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
 } from './sequence';
+import { resumeAt, save } from './save';
 import { settings } from './settings';
 import { sfx } from './sfx';
 import { Bloom, ContinueHint, Iris, SpectrumCard, VideoPlayer } from './Transitions';
@@ -43,13 +44,41 @@ function restoreAutofocus(doc: Document | null | undefined) {
   }
 }
 
+/** Fullscreen for the whole game. Browsers only allow it straight after a key press or click, so the
+ *  PRESS ANY KEY screen asks for it; if the browser says no, the game simply carries on in the window. */
+function goFullscreen() {
+  if (document.fullscreenElement) return;
+  try { void document.documentElement.requestFullscreen?.().catch(() => {}); } catch { /* not allowed here */ }
+}
+
+/** The end-credits video, fetched quietly while RED is being played so it starts without buffering.
+ *  If it is not in yet when the credits begin, the download stops and the video streams as before. */
+const credits = { url: null as string | null, abort: null as AbortController | null, timer: 0 };
+function preloadCredits() {
+  if (credits.url || credits.abort) return;
+  const ac = new AbortController(); credits.abort = ac;
+  credits.timer = window.setTimeout(async () => {   // give RED itself a head start
+    try {
+      const r = await fetch(OUTRO_VIDEO, { signal: ac.signal });
+      if (r.ok && (r.headers.get('content-type') ?? '').startsWith('video')) credits.url = URL.createObjectURL(await r.blob());
+    } catch { /* aborted or offline: it will stream */ }
+    if (credits.abort === ac) credits.abort = null;
+  }, 8000);
+}
+/** The preloaded copy if it is ready (else stop preloading and stream it). */
+function creditsSrc() {
+  clearTimeout(credits.timer); credits.abort?.abort(); credits.abort = null;
+  return credits.url ?? OUTRO_VIDEO;
+}
+function dropCredits() { if (credits.url) URL.revokeObjectURL(credits.url); credits.url = null; }
+
 /** A video you have added (served as a video, not the page's fallback HTML). */
 async function videoExists(url: string) {
   try { const r = await fetch(url, { method: 'HEAD' }); return r.ok && (r.headers.get('content-type') ?? '').startsWith('video'); }
   catch { return false; }
 }
 
-type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endDone' | 'home' | 'quit';
+type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endDone' | 'home' | 'quit' | 'resume';
 type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'check' | 'stopped' | 'end' | 'finale' | null;
 const CANCEL = Symbol('cancel');
 
@@ -256,12 +285,16 @@ export default function App() {
       for (let i = start; i < CHAPTERS.length;) {
         // HARD: a checkpoint is yours the moment you arrive at it
         if (CHECKPOINTS.includes(CHAPTERS[i].id)) reached = CHAPTERS[i].id;
+        save.set({ chapter: CHAPTERS[i].id, mode: easy ? 'easy' : 'hard' });   // CONTINUE picks up from here
+        if (i === CHAPTERS.length - 1) preloadCredits();
         const how = await playChapter(i, first, respawning, easy ? CHAPTERS[i].id : respawnAt(reached), easy);
         first = false;
         if (how === 'death') { if (!easy) i = chapterIndex(respawnAt(reached)); respawning = true; continue; }   // EASY: same level again
         respawning = false; i++;   // won it, or (EASY) chose to skip it
       }
-      // Every colour is back: the full strip lights up and rings out…
+      // Every colour is back: the run is complete, so there is nothing left to continue…
+      save.clear();
+      // …the full strip lights up and rings out…
       setIris(null);
       setCard({ band: 6, leaving: false, finale: true });
       await sleep(400); sfx.spectrumComplete();
@@ -272,7 +305,8 @@ export default function App() {
       await waitFor('endDone');
       setScene(null);
       // …the end-credits video…
-      if (await videoExists(OUTRO_VIDEO)) await playVideo(OUTRO_VIDEO, '#ffffff', OUTRO_SKIP_AFTER);
+      if (await videoExists(OUTRO_VIDEO)) await playVideo(creditsSrc(), '#ffffff', OUTRO_SKIP_AFTER);
+      dropCredits();
       // …and the closing pages, ending on THE END: return home, or quit
       clear('home', 'quit'); setScene('finale');
       const pick = await waitAny(['home', 'quit']);
@@ -303,10 +337,14 @@ export default function App() {
       }
       for (;;) {
         music.ensureTheme();
-        clear('start', 'stop');
+        clear('start', 'stop', 'resume');
         setScene('menu');
-        const pick = await waitAny(['start', 'stop']);
+        const pick = await waitAny(['start', 'stop', 'resume']);
         if (pick === 'stop') { await stopped(); continue; }
+        // CONTINUE: the saved run, in the mode it was played in
+        const saved = pick === 'resume' ? save.get() : null;
+        if (saved) settings.set({ difficulty: saved.mode });
+        const from = saved ? resumeAt(saved) : 0;
         clear('rulesGo'); setScene('rules');
         await waitFor('rulesGo');
         // the display check, before every game: the circle wipe and the window must be sound
@@ -320,7 +358,7 @@ export default function App() {
         setIris({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
         setScene(null);
         await sleep(500);
-        if ((await run(0)) === 'quit') await stopped();
+        if ((await run(from)) === 'quit') await stopped();
       }
     })().catch((e) => { if (e !== CANCEL) console.error(e); });
 
@@ -360,10 +398,10 @@ export default function App() {
 
       {bloom && <Bloom key={bloom.key} color={bloom.color} onDone={() => setBloom(null)} />}
 
-      {scene === 'boot' && <BootScreen onGo={() => { audio.get(); signal('boot'); }} />}
+      {scene === 'boot' && <BootScreen onGo={() => { audio.get(); goFullscreen(); signal('boot'); }} />}
       {scene === 'studio' && <StudioSplash onDone={() => signal('studioDone')} />}
       {scene === 'logo' && <LogoIntro onDone={() => signal('logoDone')} />}
-      {scene === 'menu' && <MainMenu onStart={() => signal('start')} onStop={() => signal('stop')} />}
+      {scene === 'menu' && <MainMenu onStart={() => signal('start')} onContinue={() => signal('resume')} onStop={() => signal('stop')} />}
       {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
       {scene === 'check' && <DisplayCheck issues={check} onGo={() => signal('checkGo')} onRetry={() => signal('checkRetry')} />}
       {scene === 'stopped' && <StoppedScreen onBack={() => signal('back')} />}
