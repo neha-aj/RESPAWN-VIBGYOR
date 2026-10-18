@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { audio } from './audio';
 import { LetterReveal } from './LetterReveal';
 import { LogoIntro } from './LogoIntro';
+import { Finale } from './Finale';
 import { StudioSplash } from './Studio';
 import { BootScreen, DisplayCheck, EndScreen, FallenOverlay, MainMenu, RespawnCard, RulesCard, StoppedScreen } from './Menu';
 import { checkDisplay, type IrisStage } from './display';
 import { music } from './music';
 import {
-  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
+  chapterIndex, CHAPTERS, CHECKPOINTS, INTRO_SKIP_AFTER, INTRO_VIDEO, OUTRO_SKIP_AFTER, OUTRO_VIDEO, reachedBy, respawnAt, startChapter, type LevelId,
 } from './sequence';
 import { settings } from './settings';
 import { sfx } from './sfx';
@@ -19,7 +20,8 @@ import { Bloom, ContinueHint, Iris, SpectrumCard, VideoPlayer } from './Transiti
  *   PRESS ANY KEY ─► SNaP studios ─► intro video (skip after 5 s) ─► logo: Thanos's torch finds V I B G Y O R
  *   ─► main menu (START · SETTINGS · HOW IT WORKS · STOP, with the roadmap) ─► the rules card
  *   ─► BnW ─► for each colour: spectrum card ─► torch clip into its letter ─► the level
- *   ─► after RED: the strip lights up ─► outro + credits video (yours, when added) ─► menu
+ *   ─► after RED: circle wipe to black ─► the strip lights up ─► EVERY COLOUR IS BACK ─► end-credits video
+ *   (skip after 5 s) ─► closing pages (Finale.tsx: title, studio, team + the snap, credits, THE END) ─► home or quit
  *
  * Each level runs in its own iframe and posts { type: 'respawn:complete' } when won and
  * { type: 'respawn:death' } when lost (its Game Over). On HARD a death sends Thanos back to the last
@@ -47,8 +49,8 @@ async function videoExists(url: string) {
   catch { return false; }
 }
 
-type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endMenu';
-type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'check' | 'stopped' | 'end' | null;
+type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endDone' | 'home' | 'quit';
+type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'check' | 'stopped' | 'end' | 'finale' | null;
 const CANCEL = Symbol('cancel');
 
 interface IrisState { d: IrisStage; ms: number; color: string; ring: boolean }
@@ -144,13 +146,24 @@ export default function App() {
       setIris({ d: IRIS_SHUT, ms: 0, color, ring: false });
     }
 
-    async function playVideo(src: string, color: string, skipAfter?: number) {
+    /** `cut`: no fade-out at the end; the caller puts the next scene up at once (the video ends on black). */
+    async function playVideo(src: string, color: string, skipAfter?: number, cut = false) {
       clear('videoEnd');
       setVideo({ src, color, key: Date.now(), fading: false, skipAfter });
       await waitFor('videoEnd');
+      if (cut) { setVideo(null); return; }
       setVideo((v) => v && { ...v, fading: true });
       await sleep(480);
       setVideo(null);
+    }
+
+    /** The end of the game: a plain circle closing to black (no coloured rim, no pinhole beat). */
+    async function wipeToBlack(ms: number) {
+      setIris({ d: IRIS_OPEN, ms: 0, color: '#000', ring: false });
+      await nextFrame();
+      sfx.irisClose();
+      setIris({ d: IRIS_SHUT, ms, color: '#000', ring: false });
+      await sleep(ms + 80);
     }
 
     /** One chapter. Returns how it ended. `back` is where a death would send Thanos. */
@@ -214,6 +227,14 @@ export default function App() {
         await sleep(260);
         return pick;
       }
+      if (i === CHAPTERS.length - 1) {
+        // RED, the last level: let its white flash play, then the circle closes to black. No hold, no text.
+        await sleep(ch.hold);
+        await wipeToBlack(1700);
+        setLevel(null);
+        await sleep(350);
+        return 'complete';
+      }
       // hold on the level's own victory screen; the shield stops clicks reaching its buttons
       continueFrom.current = performance.now() + 1200;
       clear('continue');
@@ -228,8 +249,8 @@ export default function App() {
       return 'complete';
     }
 
-    /** BnW and the seven colours (HARD: with checkpoints; EASY: retry or skip), then the finale. */
-    async function run(start: number) {
+    /** BnW and the seven colours (HARD: with checkpoints; EASY: retry or skip), then the finale. Returns the player's last pick. */
+    async function run(start: number): Promise<'home' | 'quit'> {
       const easy = settings.get().difficulty === 'easy';   // fixed for the whole run
       let reached = reachedBy(start - 1), respawning = false, first = true;
       for (let i = start; i < CHAPTERS.length;) {
@@ -241,30 +262,42 @@ export default function App() {
         respawning = false; i++;   // won it, or (EASY) chose to skip it
       }
       // Every colour is back: the full strip lights up and rings out…
+      setIris(null);
       setCard({ band: 6, leaving: false, finale: true });
       await sleep(400); sfx.spectrumComplete();
       await sleep(3800);
-      // …then your outro + credits, if it is there
-      if (await videoExists(OUTRO_VIDEO)) {
-        setCard((c) => c && { ...c, leaving: true }); await sleep(600); setCard(null);
-        await playVideo(OUTRO_VIDEO, '#ffffff');
-      }
-      clear('endMenu');
-      setScene('end');
-      setCard(null);
-      await waitFor('endMenu');
+      // …EVERY COLOUR IS BACK (it fades out by itself)…
+      setCard((c) => c && { ...c, leaving: true }); await sleep(600);
+      clear('endDone'); setScene('end'); setCard(null);
+      await waitFor('endDone');
+      setScene(null);
+      // …the end-credits video…
+      if (await videoExists(OUTRO_VIDEO)) await playVideo(OUTRO_VIDEO, '#ffffff', OUTRO_SKIP_AFTER);
+      // …and the closing pages, ending on THE END: return home, or quit
+      clear('home', 'quit'); setScene('finale');
+      const pick = await waitAny(['home', 'quit']);
+      setScene(null);
+      return pick === 'quit' ? 'quit' : 'home';
+    }
+
+    /** GAME STOPPED, until the player goes back to the menu. */
+    async function stopped() {
+      music.stop(0.8);
+      clear('back'); setScene('stopped');
+      await waitFor('back');
     }
 
     (async () => {
       const jump = startChapter();
-      if (jump !== null) { await run(jump); }
+      if (jump !== null) { if ((await run(jump)) === 'quit') await stopped(); }
       else {
         setScene('boot');
         await waitFor('boot');
         clear('studioDone'); setScene('studio');
         await waitFor('studioDone');
         setScene(null);
-        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff', INTRO_SKIP_AFTER);
+        // the intro ends on black: cut straight to the torch scene, no pause
+        if (await videoExists(INTRO_VIDEO)) await playVideo(INTRO_VIDEO, '#ffffff', INTRO_SKIP_AFTER, true);
         setScene('logo');
         await waitFor('logoDone');
       }
@@ -273,12 +306,7 @@ export default function App() {
         clear('start', 'stop');
         setScene('menu');
         const pick = await waitAny(['start', 'stop']);
-        if (pick === 'stop') {
-          music.stop(0.8);
-          clear('back'); setScene('stopped');
-          await waitFor('back');
-          continue;
-        }
+        if (pick === 'stop') { await stopped(); continue; }
         clear('rulesGo'); setScene('rules');
         await waitFor('rulesGo');
         // the display check, before every game: the circle wipe and the window must be sound
@@ -292,7 +320,7 @@ export default function App() {
         setIris({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
         setScene(null);
         await sleep(500);
-        await run(0);
+        if ((await run(0)) === 'quit') await stopped();
       }
     })().catch((e) => { if (e !== CANCEL) console.error(e); });
 
@@ -339,7 +367,8 @@ export default function App() {
       {scene === 'rules' && <RulesCard onGo={() => signal('rulesGo')} />}
       {scene === 'check' && <DisplayCheck issues={check} onGo={() => signal('checkGo')} onRetry={() => signal('checkRetry')} />}
       {scene === 'stopped' && <StoppedScreen onBack={() => signal('back')} />}
-      {scene === 'end' && <EndScreen onMenu={() => signal('endMenu')} />}
+      {scene === 'end' && <EndScreen onDone={() => signal('endDone')} />}
+      {scene === 'finale' && <Finale onHome={() => signal('home')} onQuit={() => signal('quit')} />}
 
       {crt && shellScene && <div className="crt" aria-hidden />}
     </div>

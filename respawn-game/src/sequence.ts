@@ -2,8 +2,9 @@
  *
  *   [boot: press any key] → SNaP studios card → INTRO video (skippable after 5 s) → logo reveal
  *   (Thanos's torch finds V I B G Y O R) → main menu → rules card → BnW → for each colour:
- *   spectrum card → torch clip into its letter → the level … → after RED: the strip lights up
- *   → OUTRO + credits video (videos/outro.mp4, when you add it) → back to the menu.
+ *   spectrum card → torch clip into its letter → the level … → after RED: circle wipe to black
+ *   → the strip lights up → EVERY COLOUR IS BACK → end-credits video (skippable after 5 s)
+ *   → the closing pages (title, studio, team + the snap, credits, THE END) → home or quit.
  *
  * Between chapters the shell plays its transitions (victory hold → iris close → spectrum card →
  * letter clip → colour bloom → iris open). Checkpoints are below.
@@ -47,15 +48,17 @@ export const CHAPTERS: Chapter[] = [
   band(3, 'green', 'levels/green/index.html'),
   band(4, 'yellow', 'levels/yellow/index.html'),
   band(5, 'orange', 'levels/orange/index.html'),
-  // RED types out its own closing cards after the win (~10 s), so it holds longer.
-  band(6, 'red', 'levels/red/index.html', 12000),
+  // RED is the last level: no victory hold, just its own white flash, then a plain circle wipe to black (see App.tsx).
+  band(6, 'red', 'levels/red/index.html', 1100),
 ];
 
 /** Your videos: drop these files into public/videos/ and they play in their slots (skipped while missing). */
 export const INTRO_VIDEO = 'videos/intro.mp4';
-export const OUTRO_VIDEO = 'videos/outro.mp4';
-/** The intro can be skipped once it has played this long (seconds): SKIP IN 5… then SKIP. */
+/** The end-credits video, after the "every colour is back" page. */
+export const OUTRO_VIDEO = 'videos/credits.mp4';
+/** Either video can be skipped once it has played this long (seconds): SKIP IN 5… then SKIP. */
 export const INTRO_SKIP_AFTER = 5;
+export const OUTRO_SKIP_AFTER = 5;
 
 /*
  * CHECKPOINTS: BLUE, GREEN and RED. A checkpoint counts as soon as Thanos REACHES that level;
@@ -90,9 +93,11 @@ export const CHECKPOINT_RULES: { die: string; back: string; color: string }[] = 
   { die: 'RED', back: 'RED', color: SPECTRUM[6].color },
 ];
 
-/** `?chapter=green` starts the run at that chapter, skipping the intro and menu (handy for testing and demos). */
+/** `?chapter=green` starts the run at that chapter, skipping the intro and menu (handy for testing and demos).
+ *  `?chapter=end` goes straight to the ending (after RED). */
 export function startChapter(): number | null {
   const id = new URLSearchParams(window.location.search).get('chapter');
+  if (id === 'end') return CHAPTERS.length;
   const i = CHAPTERS.findIndex((c) => c.id === id);
   return i < 0 ? null : i;
 }

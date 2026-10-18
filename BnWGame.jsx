@@ -19,8 +19,8 @@ const FONT_URL = 'https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&fa
    step (mate in 4), and White's replies are forced (only 3.Kf1 deviates,
    which loses at once to …Qf2#).
    FEN: r5k1/pp3p1p/1q3QpB/8/8/P2n1P2/1P4PP/3R3K b - - 0 1
-   Any line that forces mate in 4 is accepted (see blackMates/defence); the player
-   always gets all 4 moves and is told at the end if the line was not forced.
+   Any line of Black moves that delivers checkmate within 4 moves wins, not just
+   the scripted one; the player always gets all 4 moves.
    --------------------------------------------------------------------------- */
 export const LEVEL_1 = {
   number: 1,
@@ -80,9 +80,9 @@ export const LEVELS = [LEVEL_1, LEVEL_2];
 const RULES = [
   'You play as BLACK. You are Thanos.',
   'White is threatening checkmate. Each board tells you how many moves you have: Level 1 is checkmate in 4 moves, Level 2 is checkmate in 3 moves. That is the shortest win.',
-  'Any line that forces checkmate in that many moves counts, not just one answer.',
+  'Any set of moves that checkmates within that many moves counts, not just one answer.',
   'Each level starts with a 2-minute countdown. If the timer hits 0:00, Thanos is sent back to the start of the level.',
-  'You always get to play all your moves. If they do not force checkmate in that many moves, you are told where the line went wrong and the board resets. The timer keeps running.',
+  'You always get to play all your moves. If they do not checkmate within that many moves, you are told where the line went wrong and the board resets. The timer keeps running.',
   'Click a black piece to highlight it, then click a highlighted square. You can also drag pieces.',
   'Completing Level 1 unlocks Level 2. Completing Level 2 triggers the victory screen.',
   'Press M to toggle sound.',
@@ -661,9 +661,11 @@ function createEngine(canvas, cb, opts) {
 
   /* ----- rules -----
      The board is "checkmate in X" (X = the solution's length, the shortest win).
-     The player always gets all X moves. Every Black move is checked against the
-     real game tree: the line counts only if it still FORCES mate in the moves left.
-     Nothing is revealed until the attempt ends (mate, or X moves played). */
+     The player always gets all X moves. ANY line of Black moves that delivers
+     checkmate within X moves wins, not just the scripted answer. Each move is still
+     checked against the real game tree, so that if the attempt fails the player is
+     told where the forced mate slipped away. Nothing is revealed until the attempt
+     ends (mate, or X moves played). */
   const VAL = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
   let line = null;   // the attempt so far: { bad: first move that let the mate slip, or null; keys: Black moves played }
   const mateMoves = () => LV.solution.length;
@@ -702,7 +704,7 @@ function createEngine(canvas, cb, opts) {
     moves.push({ n: no + '…', s, c: 'b', key });
     setStep(step + 1);
     say('watch', 1.2);
-    if (mate) { later(0.45, () => (line.bad ? attemptFailed('luck') : win())); return; }
+    if (mate) { later(0.45, win); return; }   // any checkmate within X moves wins, forced or not
     if (left <= 0) { later(0.6, () => attemptFailed('moves')); return; }
     if (!legal(board, 'w').length) { later(0.6, () => attemptFailed('stalemate')); return; }
     setMsg('info', `Move ${no} of ${X}: …${s}.`);
@@ -723,8 +725,7 @@ function createEngine(canvas, cb, opts) {
     const where = bad ? (LV.hints[bad.idx + ':' + bad.key]
       || (bad.ws ? `Your line went wrong at move ${bad.idx + 1}, …${bad.s}: White could answer ${bad.ws}.`
         : `Your line went wrong at move ${bad.idx + 1}, …${bad.s}.`)) : '';
-    const head = why === 'luck' ? `Checkmate, but it was not forced. Only a forced checkmate in ${X} moves counts.`
-      : why === 'stalemate' ? 'Stalemate. That is not a win.'
+    const head = why === 'stalemate' ? 'Stalemate. That is not a win.'
         : `${X} moves and no checkmate. Those moves are not valid: this board is checkmate in ${X}, the shortest win.`;
     setMsg('bad', `${head} ${where} The position resets.`.replace(/\s+/g, ' ').trim());
     sound.wrong(); shake(14); invertT = 0.14; say('angry', 3.4); crate.om += 0.3;
@@ -741,7 +742,7 @@ function createEngine(canvas, cb, opts) {
     // reveal the annotations: the scripted line gets its !/!! marks and its story
     const scripted = line.keys.every((k, i) => LV.solution[i] && k === LV.solution[i].b);
     if (scripted) moves.forEach((r) => { if (r.c === 'b') { const i = parseInt(r.n, 10) - 1; if (LV.solution[i]) r.s += LV.solution[i].ann; } });
-    setMsg('good', scripted ? LV.solution[LV.solution.length - 1].say : `Checkmate in ${moves.filter((r) => r.c === 'b').length}. A forced line of your own.`);
+    setMsg('good', scripted ? LV.solution[LV.solution.length - 1].say : `Checkmate in ${moves.filter((r) => r.c === 'b').length}. A line of your own.`);
     rings.push({ ...sqXY(lastMove.to), t: 0 }); sound.good(2); say('smug', 1.8);
     mode = 'over'; locked = true; const used = TIME - timeLeft;
     TH.final = 'triumph';

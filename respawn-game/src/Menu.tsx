@@ -374,17 +374,14 @@ export function RespawnCard({ band }: { band: number }) {
   );
 }
 
-/** After the last colour (and the outro, once it exists). */
-export function EndScreen({ onMenu }: { onMenu: () => void }) {
-  useEffect(() => {
-    const go = (e: KeyboardEvent) => { if (e.key === 'Enter' && !e.repeat) { sfx.select(); onMenu(); } };
-    window.addEventListener('keydown', go); return () => window.removeEventListener('keydown', go);
-  }, [onMenu]);
+/** After RED: every colour is regained. No button: it fades out by itself and the end-credits video follows. */
+export function EndScreen({ onDone }: { onDone: () => void }) {
+  const done = useRef(onDone); done.current = onDone;
+  useEffect(() => { const t = setTimeout(() => done.current(), 4800); return () => clearTimeout(t); }, []);
   return (
-    <div className="boot end">
+    <div className="boot end auto">
       <Title />
       <p className="boot-title">EVERY COLOUR IS BACK</p>
-      <button type="button" className="pix-btn" autoFocus onClick={() => { sfx.select(); onMenu(); }}>▶ MAIN MENU</button>
     </div>
   );
 }

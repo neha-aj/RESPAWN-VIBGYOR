@@ -5,14 +5,16 @@ Every level, back to back, as one continuous run:
 | # | Piece | Status |
 |---|-------|--------|
 | 1 | **PRESS ANY KEY** (lets the browser play sound) | ✓ |
-| 2 | Intro video | slot ready: drop `public/videos/intro.mp4` in |
+| 2 | Intro video (`public/videos/intro.mp4`, skippable after 5 s; cuts straight into the logo) | ✓ |
 | 3 | Logo reveal: Thanos's torch finds V I B G Y O R, then the whole picture + theme music | ✓ |
 | 4 | Main menu: START · SETTINGS · HOW IT WORKS · STOP, with the roadmap | ✓ |
 | 5 | Rules card (checkpoints) | ✓ |
 | 6 | BnW | ✓ |
 | 7–20 | torch clip into V → VIOLET … torch clip into R → RED | ✓ |
-| 21 | Outro + credits video | slot ready: drop `public/videos/outro.mp4` in |
-| 22 | Back to the main menu | ✓ |
+| 21 | After RED: circle wipe to black, the strip lights up, EVERY COLOUR IS BACK | ✓ |
+| 22 | End-credits video (`public/videos/credits.mp4`, skippable after 5 s) | ✓ |
+| 23 | Closing pages: title, SNaP studios, the team (the snap), credits, THE END | ✓ |
+| 24 | RETURN TO HOME (the main menu) or QUIT | ✓ |
 
 ## Play
 
@@ -33,17 +35,32 @@ opening `dist/index.html` straight from disk won't work.
 ### Jump to a chapter
 
 Add `?chapter=<id>` to the URL to start there, skipping the intro and the menu (handy for
-testing and demos): `bnw`, `violet`, `indigo`, `blue`, `green`, `yellow`, `orange`, `red`.
+testing and demos): `bnw`, `violet`, `indigo`, `blue`, `green`, `yellow`, `orange`, `red`, or `end` for the ending.
 For example: http://localhost:4180/?chapter=green. Checkpoints up to and including that chapter count as reached.
 
-## Your intro and outro videos
+## Your intro and end-credits videos
 
-Put them in `public/videos/` (then `npm run build`, or just re-run `PLAY.bat` after deleting `dist/`):
+They live in `public/videos/` (then `npm run build`, or just re-run `PLAY.bat` after deleting `dist/`):
 
-- `intro.mp4` plays first, right after PRESS ANY KEY and before the logo reveal.
-- `outro.mp4` plays after RED, once the spectrum strip has lit up (outro + credits), then the game returns to the menu.
+- `intro.mp4` plays first, right after PRESS ANY KEY and before the logo reveal. Its black tail was trimmed
+  off, so the torch scene starts the moment it ends.
+- `credits.mp4` (VIBGYOR_end_credits, v5) plays after EVERY COLOUR IS BACK, then the closing pages.
 
-While a file is missing, its slot is simply skipped. Hold SPACE skips either one.
+Both show SKIP IN 5… then SKIP (ENTER, SPACE or a click). While a file is missing, its slot is simply skipped.
+
+## The ending
+
+RED's own closing text is switched off inside the full game. When RED is won, its white flash plays, a plain
+circle closes to black, the VIBGYOR strip lights up band by band, EVERY COLOUR IS BACK holds for a few seconds,
+and the end-credits video plays. Then the closing pages (`src/Finale.tsx` + `src/finale.css`), drawn like a comic
+(Bangers, Anime Ace 2, halftone dots), each moving on by itself or on ENTER / SPACE / → / a click:
+
+1. the VIBGYOR picture slams back in on the theme's hit
+2. A GAME BY SNaP STUDIOS
+3. GAME DEVELOPMENT TEAM: the three portraits (`public/img/team/`, cropped to 3:4 and evened out in exposure
+   and colour) slam in as comic panels; the music cuts, a SNAP, and they crumble to dust and blow away
+4. CREDITS & ACKNOWLEDGEMENTS (the theme comes back in)
+5. THE END, then RETURN TO HOME (the main menu, to play again) or QUIT (the GAME STOPPED screen)
 
 ## Deploy (website)
 
@@ -98,7 +115,7 @@ Arrow keys or W/S choose, ENTER selects, ESC goes back; the mouse works too.
 Between two levels the run never cuts. It goes:
 
 1. **Victory hold**: the level's own win screen stays up with a small *CONTINUE [ENTER]*
-   prompt and a bar that runs out (about 5 s; 12 s on RED so its closing cards can play).
+   prompt and a bar that runs out (about 5 s). RED, the last level, has no hold: see "The ending".
    ENTER, SPACE or a click moves on sooner. The level's own replay buttons are blocked here.
 2. **Iris out**: a circle closes in on the centre, pauses on a pinhole rimmed in the
    level's colour, then shuts (a soft "whoomp").
@@ -112,7 +129,7 @@ Between two levels the run never cuts. It goes:
 5. **Bloom and iris in**: a wash of the new colour blooms from the centre as the circle
    opens onto the next level, which gets keyboard focus straight away.
 
-After RED, the whole strip lights up band by band and rings out, then the outro plays.
+After RED, the whole strip lights up band by band and rings out, then the ending (below) plays.
 
 ## How it fits together
 

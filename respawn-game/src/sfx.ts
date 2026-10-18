@@ -199,6 +199,41 @@ class Sfx {
     this.bell(BAND_NOTES[band] ?? BAND_NOTES[0], 1.0, 0.22, 2.4);
     this.bell((BAND_NOTES[band] ?? BAND_NOTES[0]) * 2, 1.06, 0.07, 1.4);
   }
+
+  /* ---------- the finale ---------- */
+
+  /** A comic panel landing: a short punchy thud with a paper slap on top. */
+  slam() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+    const g = this.env(ctx, t, 0.42, 0.004, 0.3); o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.4);
+    const n = this.noise(ctx, 0.12), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
+    const ng = this.env(ctx, t, 0.16, 0.002, 0.08); n.connect(bp); bp.connect(ng); ng.connect(this.out); n.start(t);
+  }
+
+  /** The snap: a sharp, dry finger snap (a bright crack and a fleshy knock) with a long dark tail. */
+  snap() {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime + 0.01;
+    const crack = this.noise(ctx, 0.08), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 1.3;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const cg = this.env(ctx, t, 0.95, 0.0008, 0.045); crack.connect(bp); bp.connect(hp); hp.connect(cg); cg.connect(this.out); crack.start(t);
+    const knock = ctx.createOscillator(); knock.type = 'triangle'; knock.frequency.setValueAtTime(1150, t); knock.frequency.exponentialRampToValueAtTime(420, t + 0.03);
+    const kg = this.env(ctx, t, 0.35, 0.0008, 0.05); knock.connect(kg); kg.connect(this.out); knock.start(t); knock.stop(t + 0.1);
+    if (this.echo) { const send = ctx.createGain(); send.gain.value = 0.5; cg.connect(send); send.connect(this.echo); }   // the snap rings out
+    const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.setValueAtTime(70, t); sub.frequency.exponentialRampToValueAtTime(30, t + 2.4);
+    const sg = this.env(ctx, t, 0.28, 0.02, 2.4); sub.connect(sg); sg.connect(this.out); sub.start(t); sub.stop(t + 2.6);
+  }
+
+  /** Turning to dust: a soft rising hiss that drifts away (dur seconds). */
+  dust(dur = 3) {
+    const ctx = this.ac(); if (!ctx || !this.out) return;
+    const t = ctx.currentTime, n = this.noise(ctx, dur + 0.2), f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 0.6; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(5200, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + dur * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(this.out); if (this.echo) g.connect(this.echo); n.start(t); n.stop(t + dur + 0.2);
+  }
 }
 
 export const sfx = new Sfx();

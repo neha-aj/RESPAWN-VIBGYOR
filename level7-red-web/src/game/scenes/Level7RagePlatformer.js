@@ -248,7 +248,8 @@ export default class Level7RagePlatformer extends LevelBase {
       this.flash(COLORS.flash, 900);
       this.sfx('win', 0.8); this.audio?.musicOff?.();
       this.completeLevel('red');
-      this.showEndingCards(ENDING_CARDS);
+      // inside the full game the shell takes over (a circle wipe to black, then the finale), so no cards there
+      if (window.parent === window) this.showEndingCards(ENDING_CARDS);
     });
   }
 
