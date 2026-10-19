@@ -44,7 +44,9 @@ They live in `public/videos/` (then `npm run build`, or just re-run `PLAY.bat` a
 
 - `intro.mp4` plays first, right after PRESS ANY KEY and before the logo reveal. Its black tail was trimmed
   off, so the torch scene starts the moment it ends.
-- `credits.mp4` (VIBGYOR_end_credits, v5) plays after EVERY COLOUR IS BACK, then the closing pages.
+- `credits.mp4` (end credits **v6**, 3:27) plays after EVERY COLOUR IS BACK, then the closing pages. v6 is v5 with
+  shorter pauses so it runs at the intro's pace (same voice and lines). v5 is kept in `videos-archive/credits_v5.mp4`;
+  to swap back, copy it over `public/videos/credits.mp4` and run `npm run deploy`.
 
 Both show SKIP IN 5… then SKIP (ENTER, SPACE or a click). While a file is missing, its slot is simply skipped.
 
