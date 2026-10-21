@@ -304,8 +304,8 @@ export function StoppedScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** Over a lost level: Thanos has fallen, and where he will wake. */
-export function FallenOverlay({ back, easy, next, onRetry, onSkip }: { back: LevelId; easy: boolean; next: string | null; onRetry: () => void; onSkip: () => void }) {
+/** Over a lost level: Thanos has fallen, and where he will wake. `here` names a BnW board (no colour of its own). */
+export function FallenOverlay({ back, easy, next, here: board, onRetry, onSkip }: { back: LevelId; easy: boolean; next: string | null; here?: string; onRetry: () => void; onSkip: () => void }) {
   const b = BAND_IDS.indexOf(back);
   const [sel, setSel] = useState(0);   // 0 = TRY AGAIN, 1 = SKIP
   const live = useRef(false), st = useRef({ sel, onRetry, onSkip }); st.current = { sel, onRetry, onSkip };
@@ -323,9 +323,9 @@ export function FallenOverlay({ back, easy, next, onRetry, onSkip }: { back: Lev
     return () => { clearTimeout(t); window.removeEventListener('keydown', onKey); };
   }, [easy]);
   if (easy) {
-    const here = SPECTRUM[b].name;
+    const here = board ?? SPECTRUM[b].name;
     return (
-      <div className="fallen" style={vars({ '--c': SPECTRUM[b].color })}>
+      <div className="fallen" style={vars({ '--c': board ? '#FFFFFF' : SPECTRUM[b].color })}>
         <p className="fallen-title">THANOS HAS FALLEN</p>
         <p className="fallen-sub">YOU FELL IN <b>{here}</b></p>
         <div className="fallen-choices">

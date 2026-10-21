@@ -7,6 +7,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
      timeLimit        seconds per attempt (default 120)
      onLevelComplete  (stats) => void   called when a level is solved ({ level, time, timeText })
      onGameComplete   (stats) => void   called when the final level is solved
+    onLevelLost      (level) => void   called when a level's clock runs out (level = 1 or 2)
+    controlRef       ref               filled with { start(i) } so a host can start level i (0-based)
      onExit           () => void        called by the Exit button (falls back to the menu)
    ============================================================================= */
 
@@ -1211,13 +1213,14 @@ const SpeakerIcon = ({ muted }) => (
    COMPONENT
    ============================================================================= */
 
-export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onExit }) {
+export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComplete, onLevelLost, controlRef, onExit }) {
   const stageRef = useRef(null);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const mutedRef = useRef(false);
   const cbRef = useRef({});
-  cbRef.current = { onLevelComplete, onGameComplete };
+  cbRef.current = { onLevelComplete, onGameComplete, onLevelLost };
+  const levelRef = useRef(0);
 
   const [phase, setPhase] = useState('menu');      // menu | play | won | victory | lost | bye
   const [levelIdx, setLevelIdx] = useState(0);
@@ -1256,6 +1259,7 @@ export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComple
             if (cbRef.current.onGameComplete) cbRef.current.onGameComplete({ times: timesRef.current.slice() });
           }
         }
+        if (p === 'lost' && cbRef.current.onLevelLost) cbRef.current.onLevelLost(levelRef.current + 1);
         setPhase(p);
       },
     }, { timeLimit, levels: LEVELS });
@@ -1288,9 +1292,10 @@ export default function BnWGame({ timeLimit = 120, onLevelComplete, onGameComple
 
   const start = (idx) => {
     if (idx === 0) timesRef.current = [];
-    setRulesOpen(false); setStats(null); setLevelIdx(idx);
+    setRulesOpen(false); setStats(null); setLevelIdx(idx); levelRef.current = idx;
     engineRef.current && engineRef.current.start(idx);
   };
+  if (controlRef) controlRef.current = { start };
   const newRun = () => { setUnlocked(1); start(0); };
   const resetLevel = () => engineRef.current && engineRef.current.resetPosition();
   const exit = () => {

@@ -27,7 +27,9 @@ import { Bloom, ContinueHint, Iris, SpectrumCard, VideoPlayer } from './Transiti
  * Each level runs in its own iframe and posts { type: 'respawn:complete' } when won and
  * { type: 'respawn:death' } when lost (its Game Over). On HARD a death sends Thanos back to the last
  * checkpoint reached (see sequence.ts). On EASY there are no checkpoints: a death restarts that very
- * level, and the player may instead skip on to the next one. `?chapter=<id>` jumps straight into a level.
+ * level, and the player may instead skip on to the next one. BnW reports { type: 'respawn:bnw-lost', level }
+ * when a board's clock runs out: on EASY the same choice is offered per board (Level 1 → Level 2 → VIOLET);
+ * on HARD BnW keeps its own retries. `?chapter=<id>` jumps straight into a level.
  */
 
 /**
@@ -78,7 +80,7 @@ async function videoExists(url: string) {
   catch { return false; }
 }
 
-type Signal = 'complete' | 'death' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endDone' | 'home' | 'quit' | 'resume';
+type Signal = 'complete' | 'death' | 'bnwLost' | 'retry' | 'skip' | 'checkGo' | 'checkRetry' | 'continue' | 'videoEnd' | 'boot' | 'studioDone' | 'logoDone' | 'start' | 'stop' | 'rulesGo' | 'back' | 'endDone' | 'home' | 'quit' | 'resume';
 type Scene = 'boot' | 'studio' | 'logo' | 'menu' | 'rules' | 'check' | 'stopped' | 'end' | 'finale' | null;
 const CANCEL = Symbol('cancel');
 
@@ -90,7 +92,7 @@ export default function App() {
   const [level, setLevel] = useState<{ idx: number; visible: boolean; run: number } | null>(null);
   const [iris, setIris] = useState<IrisState | null>({ d: IRIS_SHUT, ms: 0, color: '#fff', ring: false });
   const [won, setWon] = useState<{ hold: number; color: string } | null>(null);
-  const [fallen, setFallen] = useState<{ back: LevelId; show: boolean; easy: boolean; next: string | null } | null>(null);
+  const [fallen, setFallen] = useState<{ back: LevelId; show: boolean; easy: boolean; next: string | null; here?: string } | null>(null);
   const [check, setCheck] = useState<string[]>([]);
   const [card, setCard] = useState<{ band: number; leaving: boolean; finale?: boolean } | null>(null);
   const [reveal, setReveal] = useState<{ band: number; key: number; fading: boolean } | null>(null);
@@ -112,6 +114,7 @@ export default function App() {
     else latched.current.add(kind);
   }, []);
   const continueFrom = useRef(0);   // input on the victory hold only counts after this time
+  const bnwLevel = useRef(1);       // the BnW board whose clock ran out (1 or 2)
 
   // a level reports a win or a loss
   useEffect(() => {
@@ -119,6 +122,7 @@ export default function App() {
       if (!e.source || e.source !== frameRef.current?.contentWindow) return;
       if (e.data?.type === 'respawn:complete') signal('complete');
       else if (e.data?.type === 'respawn:death') signal('death');
+      else if (e.data?.type === 'respawn:bnw-lost') { bnwLevel.current = e.data.level === 2 ? 2 : 1; signal('bnwLost'); }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -198,7 +202,7 @@ export default function App() {
     /** One chapter. Returns how it ended. `back` is where a death would send Thanos. */
     async function playChapter(i: number, first: boolean, respawning: boolean, back: LevelId, easy: boolean): Promise<'complete' | 'death' | 'skip'> {
       const ch = CHAPTERS[i], run = ++runs;
-      clear('complete', 'death');
+      clear('complete', 'death', 'bnwLost');
 
       if (respawning && ch.band !== null) {
         // back at a checkpoint: a short RESPAWN card while the level loads behind it
@@ -237,7 +241,26 @@ export default function App() {
       }
       focusLevel();
 
-      const how = await waitAny(['complete', 'death']);
+      const ends: Signal[] = easy && ch.id === 'bnw' ? ['complete', 'death', 'bnwLost'] : ['complete', 'death'];
+      let how = await waitAny(ends);
+      // EASY, BnW: a board's clock ran out. Try that board again, or skip on (Level 1 → Level 2 → VIOLET)
+      while (how === 'bnwLost') {
+        const lv = bnwLevel.current, here = `BnW LEVEL ${lv}`, next = lv < 2 ? 'BnW LEVEL 2' : CHAPTERS[i + 1].name;
+        setFallen({ back, show: false, easy, next, here });
+        await nextFrame();
+        shieldRef.current?.focus();
+        await sleep(1300);
+        clear('retry', 'skip');
+        setFallen({ back, show: true, easy, next, here }); sfx.fallen();
+        const pick = await waitAny(['retry', 'skip']);
+        await closeOn('#FF1E2D');
+        if (pick === 'skip' && lv === 2) { setFallen(null); setLevel(null); await sleep(260); return 'skip'; }
+        frameRef.current?.contentWindow?.postMessage({ type: 'respawn:bnw-start', level: pick === 'skip' ? 1 : lv - 1 }, '*');
+        setFallen(null);
+        await openOnto(ch.color, 1150);
+        focusLevel();
+        how = await waitAny(ends);
+      }
       if (how === 'death') {
         // the level's own Game Over shows for a moment; the shield keeps its retry buttons and keys away
         const next = CHAPTERS[i + 1]?.name ?? null;
@@ -382,7 +405,7 @@ export default function App() {
       )}
       {fallen && (
         <div ref={shieldRef} tabIndex={-1} className={`shield death${fallen.show ? ' show' : ''}`}>
-          {fallen.show && <FallenOverlay back={fallen.back} easy={fallen.easy} next={fallen.next} onRetry={() => signal('retry')} onSkip={() => signal('skip')} />}
+          {fallen.show && <FallenOverlay back={fallen.back} easy={fallen.easy} next={fallen.next} here={fallen.here} onRetry={() => signal('retry')} onSkip={() => signal('skip')} />}
         </div>
       )}
 
